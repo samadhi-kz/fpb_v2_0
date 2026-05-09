@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#d8d8d8">
     <title>FPB v2</title>
-    <link rel="stylesheet" href="styles.css?v=20260509-tree">
+    <link rel="stylesheet" href="styles.css?v=20260509-ui-actions">
   </head>
   <body>
     <main class="phone-shell" aria-label="Flag Play Board v2">
@@ -19,10 +19,6 @@
           <div id="playGrid" class="play-grid" aria-label="Plays"></div>
         </div>
 
-        <button id="categoryHandle" class="category-handle" type="button" aria-expanded="false" aria-controls="categorySheet">
-          <span></span><span></span><span></span>
-        </button>
-
         <nav class="bottom-nav" aria-label="Home commands">
           <button id="allGridBtn" type="button" title="一覧"><span class="bar-label">All</span></button>
           <button id="openJsonHomeBtn" type="button" title="JSON読込"><span class="bar-label">Load</span></button>
@@ -32,9 +28,7 @@
         </nav>
 
         <aside id="categorySheet" class="category-sheet" aria-label="Categories">
-          <button id="sheetHandle" class="sheet-handle" type="button" aria-label="Close categories">
-            <span></span><span></span><span></span>
-          </button>
+          <button id="sheetHandle" class="sheet-close" type="button" aria-label="Close categories">Close</button>
           <div id="categoryList" class="category-list"></div>
           <button id="editCategoriesBtn" class="edit-categories" type="button">
             <span class="stack-icon"></span>
@@ -65,10 +59,6 @@
           <h2>Play Notes</h2>
           <textarea id="notesInput" aria-label="Play notes"></textarea>
         </section>
-
-        <button id="editorHandle" class="editor-handle" type="button" aria-expanded="false" aria-controls="editorTools">
-          <span></span><span></span><span></span>
-        </button>
 
         <nav class="editor-bottom" aria-label="Editor commands">
           <button id="undoBtn" type="button" title="Undo"><span class="bar-label">↶</span></button>
@@ -169,8 +159,8 @@
             </div>
             <div class="panel-title">Line Shape</div>
             <div class="tool-row">
-              <button class="visual-chip is-active" type="button" data-route-mode="straight"><span class="mode-sample mode-straight"></span><span>Straight</span></button>
-              <button class="visual-chip" type="button" data-route-mode="bend"><span class="mode-sample mode-bend"></span><span>Bend</span></button>
+              <button class="visual-chip" type="button" data-route-mode="straight"><span class="mode-sample mode-straight"></span><span>Straight</span></button>
+              <button class="visual-chip is-active" type="button" data-route-mode="bend"><span class="mode-sample mode-bend"></span><span>Bend</span></button>
               <button class="visual-chip" type="button" data-route-mode="free"><span class="mode-sample mode-free"></span><span>Free</span></button>
               <button id="finishRouteBtn" type="button">Finish</button>
               <button id="undoPointBtn" type="button">Undo Pt</button>
@@ -262,10 +252,18 @@
           <button type="button" data-home-export="pdf-book">PDF Book</button>
         </div>
       </aside>
+      <aside id="categoryActionSheet" class="action-sheet" aria-label="Category edit options" hidden>
+        <button id="closeCategoryActionSheet" class="action-backdrop" type="button" aria-label="Close category edit menu"></button>
+        <div class="action-menu category-action-menu">
+          <button type="button" data-category-action="new"><span class="action-icon">+</span><span>New Folder</span></button>
+          <button type="button" data-category-action="rename"><span class="action-icon">Ab</span><span>Rename</span></button>
+          <button type="button" data-category-action="delete"><span class="action-icon">Del</span><span>Delete</span></button>
+        </div>
+      </aside>
       <input id="jsonInput" class="visually-hidden" type="file" accept=".json,application/json">
     </main>
 
-    <script src="js/default-book.js?v=20260509-tree"></script>
-    <script src="js/app.js?v=20260509-tree"></script>
+    <script src="js/default-book.js?v=20260509-ui-actions"></script>
+    <script src="js/app.js?v=20260509-ui-actions"></script>
   </body>
 </html>

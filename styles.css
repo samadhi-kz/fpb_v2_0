@@ -298,8 +298,8 @@ button {
 }
 
 .tree-play {
-  grid-template-columns: 44px minmax(0, 1fr) auto auto;
-  min-height: 44px;
+  grid-template-columns: 50px minmax(0, 1fr) auto auto;
+  min-height: 48px;
   padding: 5px 8px;
   border-top: 1px solid rgb(255 255 255 / 8%);
   color: #fff;
@@ -308,12 +308,12 @@ button {
 .tree-play-number {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 28px;
+  width: 40px;
+  height: 34px;
   border-radius: 5px;
   background: #eef1f3;
   color: #4f565b;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 900;
 }
 
@@ -339,29 +339,6 @@ button {
   font-weight: 900;
 }
 
-.category-handle,
-.editor-handle,
-.sheet-handle {
-  z-index: 5;
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 34px;
-  margin: -34px auto 0;
-  border-radius: 6px 6px 0 0;
-  background: #d7d8da;
-}
-
-.category-handle span,
-.editor-handle span,
-.sheet-handle span {
-  display: block;
-  width: 24px;
-  height: 4px;
-  margin: 1px;
-  background: #555c61;
-}
-
 .category-sheet {
   position: absolute;
   inset: auto 0 0;
@@ -369,7 +346,7 @@ button {
   display: flex;
   flex-direction: column;
   height: calc(100% - 40px);
-  padding-top: 64px;
+  padding-top: 58px;
   background: linear-gradient(150deg, #272727, #101010);
   transform: translateY(100%);
   transition: transform 180ms ease;
@@ -379,12 +356,18 @@ button {
   transform: translateY(0);
 }
 
-.category-sheet .sheet-handle {
+.category-sheet .sheet-close {
   position: absolute;
-  top: 50px;
-  left: 50%;
+  top: 14px;
+  right: 16px;
+  width: 76px;
+  height: 36px;
   margin: 0;
-  transform: translateX(-50%);
+  border-radius: 5px;
+  background: #858c90;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
 }
 
 .category-list {
@@ -490,20 +473,13 @@ button {
   padding-inline: 8px;
 }
 
-.editor-handle {
-  position: absolute;
-  left: 50%;
-  bottom: 64px;
-  margin: 0;
-  transform: translateX(-50%);
-}
-
 .tool-sheet {
   position: absolute;
   inset: auto 0 64px;
   z-index: 4;
   max-height: min(15dvh, 128px);
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 7px 10px 10px;
   background: rgb(245 246 247 / 96%);
   box-shadow: 0 -8px 24px rgb(0 0 0 / 16%);
@@ -568,6 +544,35 @@ button {
   font-weight: 900;
 }
 
+.action-menu button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.category-action-menu {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.category-action-menu button {
+  display: grid;
+  place-items: center;
+  gap: 5px;
+  min-height: 64px;
+}
+
+.action-icon {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: #eef1f3;
+  color: #4d555b;
+  font-size: 15px;
+  font-weight: 900;
+}
+
 .tool-panel[hidden] {
   display: none;
 }
@@ -613,26 +618,26 @@ button {
 }
 
 .formation-row button {
-  min-width: 80px;
+  min-width: 78px;
 }
 
 .formation-sections {
   display: grid;
-  gap: 7px;
+  gap: 4px;
 }
 
 .formation-section {
-  padding: 6px;
-  border-radius: 6px;
+  padding: 0;
+  border-radius: 0;
 }
 
 .formation-section .tool-row {
-  padding-bottom: 0;
+  padding-bottom: 4px;
 }
 
 .offense-section {
-  background: #e8f3ff;
-  border: 1px solid #acd4ff;
+  background: transparent;
+  border: 0;
 }
 
 .offense-section button {
@@ -641,8 +646,8 @@ button {
 }
 
 .defense-section {
-  background: #f3f0f0;
-  border: 1px solid #d7c8c8;
+  background: transparent;
+  border: 0;
 }
 
 .defense-section button {
@@ -1278,9 +1283,9 @@ button {
 
   .home-screen,
   .editor-bottom,
-  .editor-handle,
   .tool-sheet,
-  .selection-popover {
+  .selection-popover,
+  .action-sheet {
     display: none !important;
   }
 

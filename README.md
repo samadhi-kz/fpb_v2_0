@@ -1,135 +1,147 @@
 # Flag Play Board v2
 
-A simplified mobile-first version of Flag Play Board for designing, viewing, organizing, and sharing 5 vs 5 flag football plays.
+Flag Play Board v2 is a mobile-first static web app for making, viewing, editing, organizing, and sharing 5 vs 5 flag football playbooks.
 
-[Sponsor this project](https://github.com/sponsors/samadhi-kz)
+[Live Demo](https://samadhi-kz.github.io/fpb_v2_0/) | [Sponsor this project](https://github.com/sponsors/samadhi-kz)
 
 ## Overview
 
-FPB v2 keeps the playbook workflow from `fpb` but uses a simpler two-screen UI:
+v2 keeps the core workflow from the original `fpb` project, but rebuilds the UI around two main screens:
 
-- **Home**: play thumbnails and folder/category selection
-- **Play**: field view, notes, drawing tools, formations, and export actions
+- **Home**: play thumbnails, JSON load, folder filter, tree view, and book export
+- **Play**: field view, notes, route drawing, formation tools, edit actions, export, flip, and view lock
 
-The initial playbook is intentionally empty. Load a JSON playbook when you want to work with existing data. A bundled sample is available at:
+The first screen starts as an empty playbook with an empty folder. Load a JSON file when you want to work with existing data.
 
-```text
-```
+## Main Features
 
-## Features
-
-- Create and organize playbooks with folders
-- Load, add, and save playbook JSON
-- View plays as thumbnails on the Home screen
-- Switch Home to a tree view for folder/play ordering and quick edits
-- Open categories by pulling up the bottom handle
-- Draw routes, motions, passes, blocks, and text comments
-- Choose Straight, Bend, or Free line drawing
-- Move offensive players and defensive markers by dragging
-- Select routes, drag route handles, insert bend points, or drag the whole line
-- Edit selected route type, line end, color, and width from a tap popup
-- Edit selected player number and shape from a tap popup
-- Apply color-grouped offensive and defensive formations
+- Load and save playbook JSON
+- Organize plays by folders
+- View plays as thumbnail cards with large play numbers
+- Switch Home to **Tree** view to drag folders/plays, rename items, delete items, and add plays
+- Filter the Home list by folder from the **Folder** button
+- Edit categories from tap choices: **New Folder**, **Rename**, and **Delete**
+- Draw Route, Motion, Pass, Block, and Text items
+- Use **Bend** drawing by default, with optional Straight and Free modes
+- Move full routes, route points, inserted bend points, players, defenders, and text
+- Select a route or player to edit line type, line end, color, width, player number, and player shape
+- Apply offense and defense formations from the **Form** panel
+- Show or hide defense markers while keeping their positions saved
 - Flip the play horizontally with one tap
-- Long-press **Lock** to switch between edit mode and view mode
-- Change player marks, player size, end cap size, line width, and line color
-- Share one-play links and full-book links
-- Export long book links as text files
-- Save diagrams as PNG
-- Print one play or the full book as PDF through the browser print dialog, one play per A4-style page with notes
+- Long-press **Lock** to switch between edit mode and view mode; Flip still works in view mode
+- Export one play, the full book link, JSON, PNG, and PDF/print
+- Export **PDF Book** with one play plus notes per A4-style page
+- Reset the GitHub Pages app to an empty Home screen by tapping the app icon and confirming
 
 ## Usage
 
-1. Open `index.html` in a browser.
-2. Start from the empty playbook, or tap **Load** and choose a JSON file.
-3. To try the bundled sample, tap **Load** and choose `plays/KS-playcall.json`.
-4. Tap a play card to open the Play screen.
+1. Open `index.html` locally, or open the GitHub Pages demo.
+2. Tap **Load** and choose a JSON playbook, or start from the empty playbook.
+3. To test with bundled data, load:
+
+   ```text
+   plays/KS-playcall.json
+   ```
+
+4. Tap a thumbnail to open the Play screen.
 5. Use the bottom buttons:
-   - **↶ / ↷**: undo and redo edits
-   - **Draw**: select, route, motion, block, pass, text, player shapes, and line ends
-     Use **Straight** for one-drag lines, **Bend** for point-by-point routes, and **Free** for freehand routes.
-   - **Form**: offense formations, QB depth, defense formations, and defense visibility
-   - **Edit**: duplicate, delete, clear, reset, and folder/play actions
-   - **Export**: links, JSON, PNG, and PDF/print
+
+   - **All**: return Home to the full thumbnail list
+   - **Load**: load a JSON playbook
+   - **Tree**: edit folder/play order and names
+   - **Folder**: choose a folder filter and edit categories
+   - **Export**: Book Link, Link TXT, Save JSON, and PDF Book
+   - **Undo / Redo**: undo and redo edits in the Play screen
+   - **Draw**: choose Select, Route, Motion, Block, Pass, Text, line shape, line end, and player shape
+   - **Form**: choose offense formation, QB depth, defense formation, and Hide/Show D
+   - **Edit**: duplicate, delete, clear lines, reset play, make new play/folder, move play, rename folder
    - **Flip**: mirror the play horizontally
    - **Lock**: long-press to switch view/edit mode
-6. On Home, tap **Tree** to edit folder/play names, delete items, add plays to a folder, or drag plays/folders into a new order.
-7. Tap a line or player to open the edit popup for that item.
-8. Edit notes directly below the field.
-9. Save your playbook with **Export > Save JSON**.
 
-## GitHub Pages Cache
+6. Tap a line or player to open the selection popup for detailed editing.
+7. Edit notes directly below the field.
+8. Save with **Export > Save JSON**.
 
-The HTML references CSS and JavaScript with a version query so normal GitHub Pages checks should pick up fresh assets after each push.
+## Drawing Notes
 
-If the browser still shows old saved playbook data, tap the app icon in the top-left corner and confirm reset. This clears FPB v2 local storage on the site and reloads the app with a cache-busting URL.
+- **Bend** is the default line mode. Tap points to make a bent route, then tap **Finish** or double-tap the last point.
+- **Straight** draws a one-segment line.
+- **Free** draws a freehand route.
+- In Select mode, drag the route itself to move the whole line.
+- Drag blue handles to move route points.
+- Drag yellow insert handles to add a bend point.
+- `Delete` or `Backspace` removes the selected route or text note.
 
 ## Keyboard Shortcuts
 
 - `Ctrl+Z` / `Cmd+Z`: undo
 - `Ctrl+Shift+Z` / `Cmd+Shift+Z`: redo
 - `Ctrl+Y` / `Cmd+Y`: redo
-- `Delete` / `Backspace`: delete the selected line or text note
-- `Esc`: clear the current selection
-
-## Sample Data
-
-The bundled sample file is copied from the original FPB playbook format:
-
-```text
-plays/KS-playcall.json
-```
-
-It contains 7 folders and 27 plays. Loading it should show the play list thumbnails and allow each play to open in the Play screen.
+- `Delete` / `Backspace`: delete selected line or text
+- `Esc`: clear selection
 
 ## File Format
 
-FPB v2 reads the same folder/play JSON structure used by `fpb`, including:
+FPB v2 reads and writes plain JSON playbooks. The format supports:
 
-- folders
-- plays
-- notes
-- players
-- defenders
-- routes
-- annotations
-- player marks
-- player size and end cap size
+- folders and play order
+- play names and notes
+- offensive players and defensive markers
+- routes, motions, passes, blocks, and text annotations
+- player shapes and player size
+- line end size, line width, color, and route mode
+- defense visibility and defense formation
 
-Saved files remain plain JSON so they can be backed up, edited, shared, or version controlled.
+The bundled sample is copied from the original FPB style playbook data and contains 7 folders and 27 plays.
+
+## GitHub Pages Cache
+
+GitHub Pages and mobile browsers can keep old CSS, JavaScript, or browser-saved playbook data.
+
+This repo uses version query strings on `styles.css`, `js/default-book.js`, and `js/app.js` so new pushes are easier to verify. If old playbook data still appears, tap the top-left app icon and confirm reset. The reset clears FPB v2 local storage and reloads:
+
+```text
+https://samadhi-kz.github.io/fpb_v2_0/
+```
+
+You can also add a temporary query string when checking a fresh deploy:
+
+```text
+https://samadhi-kz.github.io/fpb_v2_0/?v=manual-check
+```
 
 ## Supported Environment
 
-- Local desktop use: open `index.html` directly in a modern browser.
-- Static hosting: GitHub Pages or any static file host is enough.
-- Mobile use: designed for iOS Safari and Android Chrome style viewports.
-- Export behavior depends on browser support for downloads, clipboard, and print.
+- Local desktop use: open `index.html` in a modern browser
+- Static hosting: GitHub Pages or any static file host
+- Mobile use: designed for iOS Safari and Android Chrome style viewports
+- Export behavior depends on browser support for downloads, clipboard, share, and print
 
 ## Testing
 
-Recommended checks:
+Recommended syntax checks:
 
 ```sh
 node --check js/default-book.js
 node --check js/app.js
+git diff --check
 ```
 
-Manual checks:
+Recommended manual checks:
 
-- Open `index.html` directly with `file://`
-- Confirm the initial playbook is empty
-- Load `plays/KS-playcall.json`
-- Confirm 27 plays appear across 7 folders
-- Switch to Tree and confirm folder/play rename, delete, add, and drag ordering work
-- Open a play and verify routes, players, defense, and notes render
-- Draw a route, change its end from `T` to `Arrow`, and confirm the old `T` end disappears
-- Draw Bend and Free routes, then confirm the route can be selected, moved, edited, and deleted
-- Select a route and confirm `Delete`, undo, and redo work
-- Select a player and confirm number/shape changes work
+- Confirm the initial app opens as an empty playbook
+- Load `plays/KS-playcall.json` and confirm 27 plays appear
+- Open Home **Tree** and test drag order, rename, delete, and add
+- Open **Folder > Edit Categories** and confirm New/Rename/Delete are tap choices
+- Open a play and confirm players, defense, routes, and notes render
+- Open **Draw** and confirm Bend is active by default
+- Draw Bend, Straight, and Free routes
+- Select and move a whole line, then edit its end from `T` to `Arrow`
+- Select a player and change number/shape
+- Use `Ctrl+Z`, redo, and `Delete`
 - Long-press **Lock**, confirm editing is blocked, and confirm **Flip** still works
-- Export **PDF Book** and confirm each play plus notes stays on one A4-style page
-- Draw a route, use Flip, and save JSON
-- Reopen the saved JSON and confirm the edits remain
+- Export **PDF Book** and confirm each play plus notes fits one A4-style page
+- Save JSON, reload it, and confirm changes remain
 
 ## Privacy
 
@@ -139,7 +151,7 @@ Shared links store playbook data in the URL hash. Do not include private or sens
 
 ## License
 
-This project follows the same MIT license as the original Flag Play Board project.
+This project follows the MIT license used by the original Flag Play Board project. See [LICENSE](./LICENSE).
 
 ## Support
 

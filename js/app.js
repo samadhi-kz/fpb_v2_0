@@ -59,7 +59,7 @@ const state = {
   folderFilterId: 'all',
   tool: 'select',
   toolPanel: 'draw',
-  routeMode: 'straight',
+  routeMode: 'bend',
   homeMode: 'grid',
   selected: null,
   dragging: null,
@@ -87,6 +87,7 @@ const els = {
   categorySheet: document.querySelector('#categorySheet'),
   categoryList: document.querySelector('#categoryList'),
   categoryHandle: document.querySelector('#categoryHandle'),
+  categoryActionSheet: document.querySelector('#categoryActionSheet'),
   sheetHandle: document.querySelector('#sheetHandle'),
   activeFolderBtn: document.querySelector('#activeFolderBtn'),
   treeViewBtn: document.querySelector('#treeViewBtn'),
@@ -341,7 +342,7 @@ function normalizePlay(play) {
     defenseFormation: play?.defenseFormation || 'normal',
     routeStyle: normalizeRouteStyle(play?.routeStyle),
     sourceImage: play?.sourceImage || '',
-    routeMode: normalizeRouteMode(play?.routeMode),
+    routeMode: normalizePlayRouteMode(play?.routeMode),
     updatedAt: play?.updatedAt || '',
     players,
     defenders,
@@ -389,7 +390,12 @@ function normalizeRoute(item) {
 
 function normalizeRouteMode(mode) {
   if (mode === 'curve' || mode === 'draw') return 'free';
-  return ROUTE_MODES.has(mode) ? mode : 'straight';
+  return ROUTE_MODES.has(mode) ? mode : 'bend';
+}
+
+function normalizePlayRouteMode(mode) {
+  if (mode === 'straight') return 'bend';
+  return normalizeRouteMode(mode);
 }
 
 function normalizeAnnotation(item) {
@@ -811,8 +817,8 @@ function syncPlayOrderFromFolders() {
 function renderThumb(play, number) {
   const svg = svgEl('svg', { class: 'thumb', viewBox: '190 42 620 638' });
   svg.append(...fieldGridNodes(true));
-  const badge = svgEl('rect', { x: 198, y: 50, width: 76, height: 62, fill: '#eeeeee', opacity: '0.92' });
-  const num = svgEl('text', { x: 236, y: 96, 'text-anchor': 'middle', fill: '#4f565b', 'font-size': 52, 'font-weight': 900 });
+  const badge = svgEl('rect', { x: 198, y: 50, width: 94, height: 74, rx: 4, fill: '#eeeeee', opacity: '0.94' });
+  const num = svgEl('text', { x: 245, y: 105, 'text-anchor': 'middle', fill: '#4f565b', 'font-size': 66, 'font-weight': 900 });
   num.textContent = number;
   svg.append(badge, num);
   play.routes.forEach((item) => svg.append(routeNode(item, play, 0.72, false)));
@@ -1106,9 +1112,10 @@ function defenderNode(item, play, scale = 1, interactive = true) {
     g.dataset.type = 'defender';
     g.dataset.id = item.id;
   }
-  const r = 30 * scale;
+  const r = 20 * scale;
+  if (interactive) g.append(svgEl('circle', { cx: item.x, cy: item.y, r: Math.max(30 * scale, r + 12), fill: 'transparent' }));
   g.append(svgEl('circle', { cx: item.x, cy: item.y, r, fill: '#d9d9d9' }));
-  const t = svgEl('text', { x: item.x, y: item.y + 11 * scale, 'text-anchor': 'middle', fill: '#50555a', 'font-size': 38 * scale, 'font-weight': 800 });
+  const t = svgEl('text', { x: item.x, y: item.y + 8 * scale, 'text-anchor': 'middle', fill: '#50555a', 'font-size': 25 * scale, 'font-weight': 800 });
   t.textContent = item.label || 'X';
   g.append(t);
   if (state.selected?.type === 'defender' && state.selected.id === item.id && interactive) {
@@ -1128,7 +1135,8 @@ function playerNode(item, play, scale = 1, interactive = true) {
     g.dataset.type = 'player';
     g.dataset.id = item.id;
   }
-  const r = normalizeNumber(play.playerSize, PLAYER_SIZE.default, PLAYER_SIZE.min, PLAYER_SIZE.max) * 1.2 * scale;
+  const r = normalizeNumber(play.playerSize, PLAYER_SIZE.default, PLAYER_SIZE.min, PLAYER_SIZE.max) * 0.8 * scale;
+  if (interactive) g.append(svgEl('circle', { cx: item.x, cy: item.y, r: Math.max(30 * scale, r + 12), fill: 'transparent' }));
   const mark = play.playerMarks?.[item.id] || 'circle';
   if (mark === 'star') {
     g.append(svgEl('path', { d: starPath(item.x, item.y, r * 1.35, r * 0.62), fill: '#ef1432' }));
@@ -1139,7 +1147,7 @@ function playerNode(item, play, scale = 1, interactive = true) {
   } else {
     g.append(svgEl('circle', { cx: item.x, cy: item.y, r, fill: '#1187f2' }));
   }
-  const t = svgEl('text', { x: item.x, y: item.y + 11 * scale, 'text-anchor': 'middle', fill: '#fff', 'font-size': 35 * scale, 'font-weight': 900 });
+  const t = svgEl('text', { x: item.x, y: item.y + 8 * scale, 'text-anchor': 'middle', fill: '#fff', 'font-size': 24 * scale, 'font-weight': 900 });
   t.textContent = item.label;
   g.append(t);
   if (state.selected?.type === 'player' && state.selected.id === item.id && interactive) {
@@ -1220,13 +1228,14 @@ function starPath(cx, cy, outer, inner) {
 }
 
 function bindEvents() {
-  els.categoryHandle.addEventListener('click', openCategorySheet);
+  els.categoryHandle?.addEventListener('click', openCategorySheet);
   els.sheetHandle.addEventListener('click', closeCategorySheet);
   els.activeFolderBtn.addEventListener('click', openCategorySheet);
   els.treeViewBtn.addEventListener('click', toggleTreeView);
   els.bookTitleBtn.addEventListener('click', renameBook);
   document.querySelectorAll('.app-icon').forEach((icon) => icon.addEventListener('click', resetAppToHome));
   document.querySelector('#editCategoriesBtn').addEventListener('click', editCategories);
+  document.querySelector('#closeCategoryActionSheet').addEventListener('click', closeCategoryActionSheet);
   document.querySelector('#allGridBtn').addEventListener('click', () => {
     state.homeMode = 'grid';
     state.folderFilterId = 'all';
@@ -1272,7 +1281,7 @@ function bindEvents() {
   document.querySelector('#editNoteBtn').addEventListener('click', editSelectedText);
   document.querySelectorAll('[data-selection-delete]').forEach((button) => button.addEventListener('click', deleteSelectedOnly));
   els.jsonInput.addEventListener('change', importJson);
-  els.editorHandle.addEventListener('click', toggleToolSheet);
+  els.editorHandle?.addEventListener('click', toggleToolSheet);
   els.playNameInput.addEventListener('input', updatePlayName);
   els.notesInput.addEventListener('input', updatePlayNotes);
   els.playerSizeRange.addEventListener('input', updatePlayerSize);
@@ -1302,6 +1311,9 @@ function bindEvents() {
   document.querySelectorAll('[data-home-export]').forEach((button) => {
     button.addEventListener('click', () => handleHomeExport(button.dataset.homeExport));
   });
+  document.querySelectorAll('[data-category-action]').forEach((button) => {
+    button.addEventListener('click', () => handleCategoryAction(button.dataset.categoryAction));
+  });
   document.addEventListener('keydown', handleKeyDown);
   els.fieldSvg.addEventListener('pointerdown', pointerDown);
   els.fieldSvg.addEventListener('pointermove', pointerMove);
@@ -1312,12 +1324,36 @@ function bindEvents() {
 
 function openCategorySheet() {
   els.categorySheet.classList.add('is-open');
-  els.categoryHandle.setAttribute('aria-expanded', 'true');
+  els.categoryHandle?.setAttribute('aria-expanded', 'true');
 }
 
 function closeCategorySheet() {
   els.categorySheet.classList.remove('is-open');
-  els.categoryHandle.setAttribute('aria-expanded', 'false');
+  els.categoryHandle?.setAttribute('aria-expanded', 'false');
+  closeCategoryActionSheet();
+}
+
+function openCategoryActionSheet() {
+  if (!ensureEditable()) return;
+  const hasFolder = Boolean(state.book?.folders.find((item) => item.id === state.activeFolderId));
+  const folderCount = state.book?.folders.length || 0;
+  document.querySelectorAll('[data-category-action]').forEach((button) => {
+    const action = button.dataset.categoryAction;
+    button.disabled = (action === 'rename' && !hasFolder) || (action === 'delete' && (!hasFolder || folderCount <= 1));
+  });
+  els.categoryActionSheet.hidden = false;
+}
+
+function closeCategoryActionSheet() {
+  if (els.categoryActionSheet) els.categoryActionSheet.hidden = true;
+}
+
+function handleCategoryAction(action) {
+  closeCategoryActionSheet();
+  closeCategorySheet();
+  if (action === 'new') createFolder();
+  if (action === 'rename') renameActiveFolder();
+  if (action === 'delete') deleteActiveFolder();
 }
 
 function toggleTreeView() {
@@ -1337,7 +1373,7 @@ function resetAppToHome() {
 function toggleToolSheet() {
   if (isEditorLocked()) return;
   els.editorTools.classList.toggle('is-open');
-  els.editorHandle.setAttribute('aria-expanded', String(els.editorTools.classList.contains('is-open')));
+  els.editorHandle?.setAttribute('aria-expanded', String(els.editorTools.classList.contains('is-open')));
 }
 
 function openToolPanel(panel) {
@@ -1358,7 +1394,7 @@ function openToolPanel(panel) {
     button.classList.toggle('is-active', map[button.id] === panel && (!wasOpen || !samePanel));
   });
   els.editorTools.classList.toggle('is-open', !wasOpen || !samePanel);
-  els.editorHandle.setAttribute('aria-expanded', String(els.editorTools.classList.contains('is-open')));
+  els.editorHandle?.setAttribute('aria-expanded', String(els.editorTools.classList.contains('is-open')));
 }
 
 function startLockPress() {
@@ -1395,7 +1431,7 @@ function toggleLockMode() {
   state.draftRoute = null;
   state.selectionPopoverDismissedKey = '';
   els.editorTools.classList.remove('is-open');
-  els.editorHandle.setAttribute('aria-expanded', 'false');
+  els.editorHandle?.setAttribute('aria-expanded', 'false');
   renderEditor();
 }
 
@@ -1419,7 +1455,7 @@ function syncLockUI() {
   });
   if (locked) {
     els.editorTools.classList.remove('is-open');
-    els.editorHandle.setAttribute('aria-expanded', 'false');
+    els.editorHandle?.setAttribute('aria-expanded', 'false');
     if (els.selectionPopover) els.selectionPopover.hidden = true;
   }
 }
@@ -1608,13 +1644,7 @@ function renameFolderById(folderId) {
 }
 
 function editCategories() {
-  if (!ensureEditable()) return;
-  const action = prompt('Category command: new / rename / delete', 'rename');
-  if (!action) return;
-  const normalized = action.trim().toLowerCase();
-  if (normalized === 'new') createFolder();
-  if (normalized === 'rename') renameActiveFolder();
-  if (normalized === 'delete') deleteActiveFolder();
+  openCategoryActionSheet();
 }
 
 function deleteActiveFolder() {
