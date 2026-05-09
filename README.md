@@ -23,8 +23,9 @@ The initial playbook is intentionally empty. Load a JSON playbook when you want 
 - View plays as thumbnails on the Home screen
 - Open categories by pulling up the bottom handle
 - Draw routes, motions, passes, blocks, and text comments
+- Choose Straight, Bend, or Free line drawing
 - Move offensive players and defensive markers by dragging
-- Select routes and drag route handles
+- Select routes, drag route handles, insert bend points, or drag the whole line
 - Edit selected route type, line end, color, and width from a tap popup
 - Edit selected player number and shape from a tap popup
 - Apply color-grouped offensive and defensive formations
@@ -45,6 +46,7 @@ The initial playbook is intentionally empty. Load a JSON playbook when you want 
 5. Use the bottom buttons:
    - **↶ / ↷**: undo and redo edits
    - **Draw**: select, route, motion, block, pass, text, player shapes, and line ends
+     Use **Straight** for one-drag lines, **Bend** for point-by-point routes, and **Free** for freehand routes.
    - **Form**: offense formations, QB depth, defense formations, and defense visibility
    - **Edit**: duplicate, delete, clear, reset, and folder/play actions
    - **Export**: links, JSON, PNG, and PDF/print
@@ -112,6 +114,7 @@ Manual checks:
 - Confirm 27 plays appear across 7 folders
 - Open a play and verify routes, players, defense, and notes render
 - Draw a route, change its end from `T` to `Arrow`, and confirm the old `T` end disappears
+- Draw Bend and Free routes, then confirm the route can be selected, moved, edited, and deleted
 - Select a route and confirm `Delete`, undo, and redo work
 - Select a player and confirm number/shape changes work
 - Long-press **Lock**, confirm editing is blocked, and confirm **Flip** still works

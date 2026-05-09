@@ -42,6 +42,8 @@ button {
   overflow: hidden;
   background: #fff;
   border: 1px solid #1b1b1b;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .screen {
@@ -104,6 +106,8 @@ button {
   white-space: normal;
   overflow: hidden;
   outline: none;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .play-grid-wrap {
@@ -335,6 +339,8 @@ button {
   display: flex;
   flex: 0 0 auto;
   padding: 4px 4px 0;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .field {
@@ -344,6 +350,8 @@ button {
   aspect-ratio: 770 / 670;
   touch-action: none;
   background: #fff;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .notes {
@@ -371,6 +379,8 @@ button {
   line-height: 1.45;
   outline: none;
   overflow: auto;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .editor-bottom {
@@ -550,7 +560,8 @@ button {
 
 .line-sample,
 .end-sample,
-.weight-sample {
+.weight-sample,
+.mode-sample {
   position: relative;
   flex: 0 0 auto;
   display: inline-block;
@@ -560,7 +571,8 @@ button {
 
 .line-sample::before,
 .end-sample::before,
-.weight-sample::before {
+.weight-sample::before,
+.mode-sample::before {
   content: "";
   position: absolute;
   left: 3px;
@@ -608,6 +620,30 @@ button {
   height: 18px;
   border-radius: 4px;
   background: currentColor;
+}
+
+.mode-bend::before {
+  left: 3px;
+  right: auto;
+  top: 3px;
+  width: 26px;
+  height: 16px;
+  border-left: 5px solid currentColor;
+  border-bottom: 5px solid currentColor;
+  border-radius: 0 0 0 4px;
+  background: transparent;
+}
+
+.mode-free::before {
+  left: 2px;
+  right: auto;
+  top: 5px;
+  width: 30px;
+  height: 12px;
+  border-top: 5px solid currentColor;
+  border-radius: 50%;
+  background: transparent;
+  transform: rotate(-10deg);
 }
 
 .end-dot::after {
@@ -814,12 +850,22 @@ button {
 .defender-node,
 .annotation-node,
 .route-hit,
-.route-handle {
+.route-handle,
+.route-insert {
   cursor: pointer;
 }
 
-.route-handle {
+.route-hit {
+  cursor: move;
+}
+
+.route-handle,
+.route-insert {
   filter: drop-shadow(0 1px 2px rgb(0 0 0 / 25%));
+}
+
+.route-insert {
+  opacity: 0.82;
 }
 
 .is-selected .route-visible {
@@ -834,7 +880,8 @@ button {
 .editor-screen.is-locked .defender-node,
 .editor-screen.is-locked .annotation-node,
 .editor-screen.is-locked .route-hit,
-.editor-screen.is-locked .route-handle {
+.editor-screen.is-locked .route-handle,
+.editor-screen.is-locked .route-insert {
   cursor: default;
 }
 

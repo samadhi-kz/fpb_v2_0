@@ -11,7 +11,7 @@
     <main class="phone-shell" aria-label="Flag Play Board v2">
       <section id="homeView" class="screen home-screen is-active" aria-label="Play list">
         <header class="topbar">
-          <img class="app-icon" src="UI_example/download.jpg" alt="">
+          <img class="app-icon" src="images/app_icon.jpg" alt="">
           <button id="bookTitleBtn" class="book-title" type="button">KSプレーコール2026春__UCオレ</button>
         </header>
 
@@ -44,7 +44,7 @@
 
       <section id="editorView" class="screen editor-screen" aria-label="Play editor">
         <header class="editor-topbar">
-          <img class="app-icon" src="UI_example/download.jpg" alt="">
+          <img class="app-icon" src="images/app_icon.jpg" alt="">
           <textarea id="playNameInput" class="play-name-input" aria-label="Play name" rows="2"></textarea>
           <button id="backToBookBtn" class="playbook-button" type="button">Playbook</button>
         </header>
@@ -52,8 +52,8 @@
         <div class="field-stage">
           <svg id="fieldSvg" class="field" viewBox="115 20 770 670" role="img" aria-label="Flag football field">
             <g id="gridLayer"></g>
-            <g id="routeLayer"></g>
             <g id="defenseLayer"></g>
+            <g id="routeLayer"></g>
             <g id="playerLayer"></g>
             <g id="annotationLayer"></g>
             <g id="handleLayer"></g>
@@ -93,6 +93,14 @@
                 <button type="button" data-route-type="motion"><span class="line-sample line-motion"></span><span>Motion</span></button>
                 <button type="button" data-route-type="pass"><span class="line-sample line-pass"></span><span>Pass</span></button>
                 <button type="button" data-route-type="block"><span class="line-sample line-block"></span><span>Block</span></button>
+              </div>
+            </div>
+            <div class="inspector-group">
+              <span class="inspector-label">Line Shape</span>
+              <div class="visual-row">
+                <button type="button" data-route-mode="straight"><span class="mode-sample mode-straight"></span><span>Straight</span></button>
+                <button type="button" data-route-mode="bend"><span class="mode-sample mode-bend"></span><span>Bend</span></button>
+                <button type="button" data-route-mode="free"><span class="mode-sample mode-free"></span><span>Free</span></button>
               </div>
             </div>
             <div class="inspector-group">
@@ -157,6 +165,14 @@
               <button class="tool-chip visual-chip" type="button" data-tool="block"><span class="line-sample line-block"></span><span>Block</span></button>
               <button class="tool-chip visual-chip" type="button" data-tool="pass"><span class="line-sample line-pass"></span><span>Pass</span></button>
               <button class="tool-chip" type="button" data-tool="text">Text</button>
+            </div>
+            <div class="panel-title">Line Shape</div>
+            <div class="tool-row">
+              <button class="visual-chip is-active" type="button" data-route-mode="straight"><span class="mode-sample mode-straight"></span><span>Straight</span></button>
+              <button class="visual-chip" type="button" data-route-mode="bend"><span class="mode-sample mode-bend"></span><span>Bend</span></button>
+              <button class="visual-chip" type="button" data-route-mode="free"><span class="mode-sample mode-free"></span><span>Free</span></button>
+              <button id="finishRouteBtn" type="button">Finish</button>
+              <button id="undoPointBtn" type="button">Undo Pt</button>
             </div>
             <div class="panel-title">Player Shape / Line End</div>
             <div class="tool-row">

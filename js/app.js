@@ -19,6 +19,7 @@ const ROUTE_WIDTH = { min: 2, max: 16, default: 6 };
 const MARKS = new Set(['circle', 'ring', 'star', 'diamond', 'square']);
 const ROUTE_ENDS = new Set(['arrow', 't', 'dot', 'none']);
 const DRAW_TOOLS = new Set(['route', 'motion', 'block', 'pass']);
+const ROUTE_MODES = new Set(['straight', 'bend', 'free']);
 
 function fieldX(yardsFromLeft) {
   return field.left + (yardsFromLeft / 25) * (field.right - field.left);
@@ -58,6 +59,7 @@ const state = {
   folderFilterId: 'all',
   tool: 'select',
   toolPanel: 'draw',
+  routeMode: 'straight',
   selected: null,
   dragging: null,
   draftRoute: null,
@@ -117,7 +119,9 @@ const els = {
   drawToolsBtn: document.querySelector('#drawToolsBtn'),
   formationBtn: document.querySelector('#formationBtn'),
   editActionsBtn: document.querySelector('#editActionsBtn'),
-  exportActionsBtn: document.querySelector('#exportActionsBtn')
+  exportActionsBtn: document.querySelector('#exportActionsBtn'),
+  finishRouteBtn: document.querySelector('#finishRouteBtn'),
+  undoPointBtn: document.querySelector('#undoPointBtn')
 };
 
 function makeId(prefix) {
@@ -148,6 +152,7 @@ function defaultPlay(name = 'New Offensive Play') {
     endCapSize: END_CAP_SIZE.default,
     defenseVisible: true,
     defenseFormation: 'normal',
+    routeMode: state.routeMode,
     routeStyle: clone(state.routeDefaults),
     players: Object.entries(formations.spread).map(([label, [x, y]]) => ({
       id: `p${label}`,
@@ -321,7 +326,7 @@ function normalizePlay(play) {
     defenseFormation: play?.defenseFormation || 'normal',
     routeStyle: normalizeRouteStyle(play?.routeStyle),
     sourceImage: play?.sourceImage || '',
-    routeMode: play?.routeMode || 'straight',
+    routeMode: normalizeRouteMode(play?.routeMode),
     updatedAt: play?.updatedAt || '',
     players,
     defenders,
@@ -356,7 +361,7 @@ function normalizeRoute(item) {
     id: item?.id || makeId('route'),
     playerId: item?.playerId || '',
     type: ['route', 'motion', 'block', 'pass'].includes(item?.type) ? item.type : 'route',
-    mode: item?.mode || 'straight',
+    mode: normalizeRouteMode(item?.mode),
     points: Array.isArray(item?.points)
       ? item.points.map((point) => [normalizeNumber(point?.[0], fieldX(12.5), 0, 1000), normalizeNumber(point?.[1], fieldY(0), 0, 760)])
       : [],
@@ -365,6 +370,11 @@ function normalizeRoute(item) {
     width: normalizeNumber(item?.width, ROUTE_WIDTH.default, ROUTE_WIDTH.min, ROUTE_WIDTH.max),
     opacity: normalizeNumber(item?.opacity, 1, 0.2, 1)
   };
+}
+
+function normalizeRouteMode(mode) {
+  if (mode === 'curve' || mode === 'draw') return 'free';
+  return ROUTE_MODES.has(mode) ? mode : 'straight';
 }
 
 function normalizeAnnotation(item) {
@@ -710,10 +720,10 @@ function routeNode(item, play, scale = 1, interactive = true) {
   const g = svgEl('g', { class: selectedClass('route', item.id) });
   if (points.length < 2) return g;
 
-  const displayPoints = item.type === 'motion' ? motionPoints(points) : points;
-  const visible = svgEl('polyline', {
+  const d = routePathData(item);
+  const visible = svgEl('path', {
     class: 'route-visible',
-    points: displayPoints.map((point) => point.join(',')).join(' '),
+    d,
     fill: 'none',
     stroke: item.color || '#101010',
     'stroke-width': (item.width || ROUTE_WIDTH.default) * scale,
@@ -729,12 +739,12 @@ function routeNode(item, play, scale = 1, interactive = true) {
   if (item.end === 'dot') g.append(dotEndNode(points, item, play, scale));
 
   if (interactive) {
-    const hit = svgEl('polyline', {
+    const hit = svgEl('path', {
       class: 'route-hit',
-      points: displayPoints.map((point) => point.join(',')).join(' '),
+      d,
       fill: 'none',
       stroke: 'transparent',
-      'stroke-width': Math.max(24, (item.width || ROUTE_WIDTH.default) + 18),
+      'stroke-width': Math.max(touchSized() ? 44 : 30, (item.width || ROUTE_WIDTH.default) + (touchSized() ? 34 : 22)),
       'stroke-linecap': 'round',
       'stroke-linejoin': 'round',
       'data-type': 'route',
@@ -743,6 +753,51 @@ function routeNode(item, play, scale = 1, interactive = true) {
     g.append(hit);
   }
   return g;
+}
+
+function linePath(points) {
+  if (points.length < 2) return '';
+  return `M ${points[0][0]} ${points[0][1]} ${points.slice(1).map((point) => `L ${point[0]} ${point[1]}`).join(' ')}`;
+}
+
+function smoothPath(points) {
+  if (points.length < 3) return linePath(points);
+  const parts = [`M ${points[0][0]} ${points[0][1]}`];
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const cp1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const cp2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    parts.push(`C ${cp1[0]} ${cp1[1]} ${cp2[0]} ${cp2[1]} ${p2[0]} ${p2[1]}`);
+  }
+  return parts.join(' ');
+}
+
+function routePathData(item) {
+  const points = item.type === 'motion' ? motionPoints(item.points || []) : item.points || [];
+  return item.mode === 'free' ? smoothPath(points) : linePath(points);
+}
+
+function routeLength(points) {
+  return points.slice(1).reduce((total, point, index) => total + Math.hypot(point[0] - points[index][0], point[1] - points[index][1]), 0);
+}
+
+function sanitizedRoutePoints(points) {
+  const cleaned = [];
+  points.forEach((point) => {
+    const next = clampPoint({ x: point[0], y: point[1] });
+    const previous = cleaned[cleaned.length - 1];
+    if (!previous || Math.hypot(next[0] - previous[0], next[1] - previous[1]) > 5) {
+      cleaned.push(next);
+    }
+  });
+  return cleaned;
+}
+
+function touchSized() {
+  return window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth <= 640;
 }
 
 function arrowEndNode(points, item, play, scale) {
@@ -835,9 +890,9 @@ function defenderNode(item, play, scale = 1, interactive = true) {
     g.dataset.type = 'defender';
     g.dataset.id = item.id;
   }
-  const r = 35 * scale;
+  const r = 30 * scale;
   g.append(svgEl('circle', { cx: item.x, cy: item.y, r, fill: '#d9d9d9' }));
-  const t = svgEl('text', { x: item.x, y: item.y + 13 * scale, 'text-anchor': 'middle', fill: '#50555a', 'font-size': 46 * scale, 'font-weight': 800 });
+  const t = svgEl('text', { x: item.x, y: item.y + 11 * scale, 'text-anchor': 'middle', fill: '#50555a', 'font-size': 38 * scale, 'font-weight': 800 });
   t.textContent = item.label || 'X';
   g.append(t);
   if (state.selected?.type === 'defender' && state.selected.id === item.id && interactive) {
@@ -857,7 +912,7 @@ function playerNode(item, play, scale = 1, interactive = true) {
     g.dataset.type = 'player';
     g.dataset.id = item.id;
   }
-  const r = normalizeNumber(play.playerSize, PLAYER_SIZE.default, PLAYER_SIZE.min, PLAYER_SIZE.max) * 1.32 * scale;
+  const r = normalizeNumber(play.playerSize, PLAYER_SIZE.default, PLAYER_SIZE.min, PLAYER_SIZE.max) * 1.2 * scale;
   const mark = play.playerMarks?.[item.id] || 'circle';
   if (mark === 'star') {
     g.append(svgEl('path', { d: starPath(item.x, item.y, r * 1.35, r * 0.62), fill: '#ef1432' }));
@@ -868,7 +923,7 @@ function playerNode(item, play, scale = 1, interactive = true) {
   } else {
     g.append(svgEl('circle', { cx: item.x, cy: item.y, r, fill: '#1187f2' }));
   }
-  const t = svgEl('text', { x: item.x, y: item.y + 13 * scale, 'text-anchor': 'middle', fill: '#fff', 'font-size': 42 * scale, 'font-weight': 900 });
+  const t = svgEl('text', { x: item.x, y: item.y + 11 * scale, 'text-anchor': 'middle', fill: '#fff', 'font-size': 35 * scale, 'font-weight': 900 });
   t.textContent = item.label;
   g.append(t);
   if (state.selected?.type === 'player' && state.selected.id === item.id && interactive) {
@@ -901,16 +956,33 @@ function drawSelectionHandles(play) {
   if (state.selected?.type !== 'route') return;
   const item = play.routes.find((routeItem) => routeItem.id === state.selected.id);
   if (!item) return;
+  const handleRadius = touchSized() ? 18 : 13;
+  const insertRadius = touchSized() ? 12 : 8;
   item.points.forEach((point, index) => {
     els.handleLayer.append(svgEl('circle', {
       class: 'route-handle',
       cx: point[0],
       cy: point[1],
-      r: 13,
+      r: handleRadius,
       fill: index === item.points.length - 1 ? '#1da1f2' : '#fff',
       stroke: '#1da1f2',
       'stroke-width': 5,
       'data-type': 'route-point',
+      'data-id': item.id,
+      'data-index': index
+    }));
+  });
+  item.points.slice(0, -1).forEach((point, index) => {
+    const next = item.points[index + 1];
+    els.handleLayer.append(svgEl('circle', {
+      class: 'route-insert',
+      cx: (point[0] + next[0]) / 2,
+      cy: (point[1] + next[1]) / 2,
+      r: insertRadius,
+      fill: '#fff',
+      stroke: '#7aaee8',
+      'stroke-width': 4,
+      'data-type': 'route-insert',
       'data-id': item.id,
       'data-index': index
     }));
@@ -975,6 +1047,8 @@ function bindEvents() {
   document.querySelector('#clearLinesBtn').addEventListener('click', clearLines);
   document.querySelector('#resetPlayBtn').addEventListener('click', resetPlayDiagram);
   document.querySelector('#defenseToggleBtn').addEventListener('click', toggleDefense);
+  els.finishRouteBtn.addEventListener('click', finishRoute);
+  els.undoPointBtn.addEventListener('click', undoBendPoint);
   document.querySelector('#closeSelectionPopover').addEventListener('click', closeSelectionPopover);
   document.querySelector('#editNoteBtn').addEventListener('click', editSelectedText);
   document.querySelectorAll('[data-selection-delete]').forEach((button) => button.addEventListener('click', deleteSelectedOnly));
@@ -1000,6 +1074,9 @@ function bindEvents() {
   document.querySelectorAll('[data-mark]').forEach((button) => button.addEventListener('click', () => setSelectedMark(button.dataset.mark)));
   document.querySelectorAll('[data-end]').forEach((button) => button.addEventListener('click', () => setSelectedEnd(button.dataset.end)));
   document.querySelectorAll('[data-route-type]').forEach((button) => button.addEventListener('click', () => setSelectedRouteType(button.dataset.routeType)));
+  document.querySelectorAll('[data-route-mode]').forEach((button) => {
+    button.addEventListener('click', () => setRouteMode(button.dataset.routeMode, Boolean(button.closest('#routeInspector'))));
+  });
   document.querySelectorAll('[data-route-width]').forEach((button) => button.addEventListener('click', () => setSelectedRouteWidth(button.dataset.routeWidth)));
   document.querySelectorAll('[data-route-color]').forEach((button) => button.addEventListener('click', () => setSelectedRouteColor(button.dataset.routeColor)));
   document.querySelectorAll('[data-player-label]').forEach((button) => button.addEventListener('click', () => setSelectedPlayerLabel(button.dataset.playerLabel)));
@@ -1383,23 +1460,156 @@ function resetPlayDiagram() {
 
 function setTool(tool) {
   if (!ensureEditable()) return;
+  if (state.draftRoute) finishRoute();
   state.tool = tool;
-  state.draftRoute = null;
   document.querySelectorAll('[data-tool]').forEach((button) => {
     button.classList.toggle('is-active', button.dataset.tool === tool);
   });
   syncControls();
 }
 
+function setRouteMode(mode, editSelected = false) {
+  if (!ensureEditable()) return;
+  if (!ROUTE_MODES.has(mode)) return;
+  if (state.draftRoute) finishRoute();
+  state.routeMode = mode;
+  const play = activePlay();
+  if (play) play.routeMode = mode;
+  if (editSelected && play && state.selected?.type === 'route') {
+    const item = play.routes.find((routeItem) => routeItem.id === state.selected.id);
+    if (item) {
+      pushHistory();
+      item.mode = mode;
+      if (mode === 'straight' && item.points.length > 2) {
+        item.points = [item.points[0], item.points[item.points.length - 1]];
+      }
+      persist();
+      renderEditor();
+      return;
+    }
+  }
+  persist();
+  syncControls();
+}
+
+function startRouteDraft(event, play, point, targetType, target) {
+  const explicitPlayer = targetType === 'player' ? play.players.find((item) => item.id === target.dataset.id) : null;
+  const nearest = nearestPlayer(play, point);
+  const player = explicitPlayer || (nearest && distance(nearest, point) < 85 ? nearest : null);
+  const start = player ? [player.x, player.y] : clampPoint(point);
+  const end = clampPoint(point);
+  const input = normalizeRouteMode(play.routeMode || state.routeMode);
+  pushHistory();
+  state.draftRoute = {
+    id: makeId('route'),
+    playerId: player?.id || '',
+    type: state.tool,
+    mode: input,
+    input,
+    points: [start, end],
+    end: state.tool === 'motion' ? 'none' : state.tool === 'block' ? 't' : state.routeDefaults.end,
+    color: state.tool === 'motion' ? '#ef0000' : state.routeDefaults.color,
+    width: state.routeDefaults.width,
+    opacity: 1
+  };
+  play.routes.push(state.draftRoute);
+  state.selected = { type: 'route', id: state.draftRoute.id };
+  if (input !== 'bend') els.fieldSvg.setPointerCapture(event.pointerId);
+  renderEditor();
+}
+
+function addBendPoint(point) {
+  const route = state.draftRoute;
+  if (!route || route.input !== 'bend') return;
+  const next = clampPoint(point);
+  route.points[route.points.length - 1] = next;
+  route.points.push([...next]);
+  route.undonePoints = [];
+  renderEditor();
+}
+
+function undoBendPoint() {
+  if (!ensureEditable()) return;
+  const route = state.draftRoute;
+  if (!route || route.input !== 'bend') return;
+  if (route.points.length <= 2) {
+    cancelRouteDraft();
+    return;
+  }
+  const preview = route.points.pop();
+  const removed = route.points.pop();
+  if (removed) {
+    route.undonePoints = route.undonePoints || [];
+    route.undonePoints.push(removed);
+  }
+  route.points.push(preview || route.points[route.points.length - 1]);
+  renderEditor();
+}
+
+function finishRoute() {
+  if (!ensureEditable()) return;
+  const route = state.draftRoute;
+  const play = activePlay();
+  if (!route || !play) return;
+  const cleaned = sanitizedRoutePoints(route.points);
+  if (cleaned.length < 2 || routeLength(cleaned) < 12) {
+    play.routes = play.routes.filter((item) => item.id !== route.id);
+    state.selected = null;
+  } else {
+    route.points = cleaned;
+    route.mode = normalizeRouteMode(route.mode);
+    delete route.input;
+    delete route.undonePoints;
+    state.selected = { type: 'route', id: route.id };
+  }
+  state.draftRoute = null;
+  state.dragging = null;
+  persist();
+  renderAll();
+}
+
+function cancelRouteDraft() {
+  const route = state.draftRoute;
+  const play = activePlay();
+  if (route && play) play.routes = play.routes.filter((item) => item.id !== route.id);
+  state.draftRoute = null;
+  state.dragging = null;
+  state.selected = null;
+  persist();
+  renderAll();
+}
+
+function clampPoint(point) {
+  return [clamp(point.x ?? point[0], field.left, field.right), clamp(point.y ?? point[1], field.top, field.bottom)];
+}
+
+function clampedRouteDelta(points, dx, dy) {
+  const minX = Math.min(...points.map(([x]) => x));
+  const maxX = Math.max(...points.map(([x]) => x));
+  const minY = Math.min(...points.map(([, y]) => y));
+  const maxY = Math.max(...points.map(([, y]) => y));
+  return {
+    dx: clamp(dx, field.left - minX, field.right - maxX),
+    dy: clamp(dy, field.top - minY, field.bottom - maxY)
+  };
+}
+
 function pointerDown(event) {
   if (isEditorLocked()) return;
   const play = activePlay();
   if (!play) return;
+  event.preventDefault();
   if (document.activeElement?.matches?.('input, textarea')) document.activeElement.blur();
   const point = svgPoint(event);
   const target = event.target.closest?.('[data-type]');
   const type = target?.dataset.type;
   state.selectionPopoverDismissedKey = '';
+
+  if (state.draftRoute?.input === 'bend') {
+    addBendPoint(point);
+    if (event.detail > 1) finishRoute();
+    return;
+  }
 
   if (type === 'route-point') {
     state.selected = { type: 'route', id: target.dataset.id };
@@ -1410,28 +1620,22 @@ function pointerDown(event) {
     return;
   }
 
-  if (DRAW_TOOLS.has(state.tool)) {
-    const explicitPlayer = type === 'player' ? play.players.find((item) => item.id === target.dataset.id) : null;
-    const nearest = nearestPlayer(play, point);
-    const player = explicitPlayer || (nearest && distance(nearest, point) < 85 ? nearest : null);
-    const start = player ? [player.x, player.y] : [point.x, point.y];
-    const end = [clamp(point.x, field.left, field.right), clamp(point.y, field.top, field.bottom)];
+  if (type === 'route-insert') {
+    const item = play.routes.find((routeItem) => routeItem.id === target.dataset.id);
+    if (!item) return;
+    const index = Number(target.dataset.index) + 1;
     pushHistory();
-    state.draftRoute = {
-      id: makeId('route'),
-      playerId: player?.id || '',
-      type: state.tool,
-      mode: 'straight',
-      points: [start, end],
-      end: state.tool === 'motion' ? 'none' : state.tool === 'block' ? 't' : state.routeDefaults.end,
-      color: state.tool === 'motion' ? '#ef0000' : state.routeDefaults.color,
-      width: state.routeDefaults.width,
-      opacity: 1
-    };
-    play.routes.push(state.draftRoute);
-    state.selected = { type: 'route', id: state.draftRoute.id };
+    item.mode = item.mode === 'straight' ? 'bend' : normalizeRouteMode(item.mode);
+    item.points.splice(index, 0, [point.x, point.y]);
+    state.selected = { type: 'route', id: item.id };
+    state.dragging = { type: 'route-point', id: item.id, index };
     els.fieldSvg.setPointerCapture(event.pointerId);
     renderEditor();
+    return;
+  }
+
+  if (DRAW_TOOLS.has(state.tool)) {
+    startRouteDraft(event, play, point, type, target);
     return;
   }
 
@@ -1446,6 +1650,18 @@ function pointerDown(event) {
 
   if (type === 'route') {
     state.selected = { type: 'route', id: target.dataset.id };
+    const item = play.routes.find((routeItem) => routeItem.id === target.dataset.id);
+    if (item) {
+      state.dragging = {
+        type: 'route-move',
+        id: item.id,
+        start: clampPoint(point),
+        points: clone(item.points),
+        moved: false
+      };
+      pushHistory();
+      els.fieldSvg.setPointerCapture(event.pointerId);
+    }
     renderEditor();
     return;
   }
@@ -1469,9 +1685,21 @@ function pointerMove(event) {
   if (isEditorLocked()) return;
   const play = activePlay();
   if (!play) return;
+  event.preventDefault();
   const point = svgPoint(event);
   const x = clamp(point.x, field.left, field.right);
   const y = clamp(point.y, field.top, field.bottom);
+
+  if (state.dragging?.type === 'route-move') {
+    const item = play.routes.find((routeItem) => routeItem.id === state.dragging.id);
+    if (item) {
+      const delta = clampedRouteDelta(state.dragging.points, x - state.dragging.start[0], y - state.dragging.start[1]);
+      item.points = state.dragging.points.map(([px, py]) => [px + delta.dx, py + delta.dy]);
+      state.dragging.moved = Math.hypot(delta.dx, delta.dy) > 2;
+      renderEditor();
+    }
+    return;
+  }
 
   if (state.dragging?.type === 'player') {
     const player = play.players.find((item) => item.id === state.dragging.id);
@@ -1512,6 +1740,16 @@ function pointerMove(event) {
     return;
   }
 
+  if (state.draftRoute?.input === 'free') {
+    const points = state.draftRoute.points;
+    const last = points[points.length - 1];
+    if (!last || Math.hypot(x - last[0], y - last[1]) > 8) {
+      points.push([x, y]);
+      renderEditor();
+    }
+    return;
+  }
+
   if (state.draftRoute) {
     state.draftRoute.points[state.draftRoute.points.length - 1] = [x, y];
     renderEditor();
@@ -1520,9 +1758,13 @@ function pointerMove(event) {
 
 function pointerUp() {
   if (isEditorLocked()) return;
-  if (state.dragging || state.draftRoute) {
+  if (state.draftRoute?.input === 'bend') return;
+  if (state.draftRoute?.input === 'straight' || state.draftRoute?.input === 'free') {
+    finishRoute();
+    return;
+  }
+  if (state.dragging) {
     state.dragging = null;
-    state.draftRoute = null;
     persist();
     renderAll();
   }
@@ -1686,6 +1928,10 @@ function syncSelectionPopover(play) {
   document.querySelectorAll('[data-route-type]').forEach((button) => {
     button.classList.toggle('is-active', Boolean(route && button.dataset.routeType === route.type));
   });
+  document.querySelectorAll('#routeInspector [data-route-mode]').forEach((button) => {
+    const activeMode = route?.mode || play.routeMode || state.routeMode;
+    button.classList.toggle('is-active', button.dataset.routeMode === activeMode);
+  });
   document.querySelectorAll('[data-end]').forEach((button) => {
     const activeEnd = route?.end || state.routeDefaults.end;
     button.classList.toggle('is-active', button.dataset.end === activeEnd);
@@ -1710,8 +1956,25 @@ function handleKeyDown(event) {
   const isTextInput = active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA' || active?.isContentEditable;
   const key = event.key.toLowerCase();
 
+  if (state.draftRoute?.input === 'bend' && !isTextInput) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      finishRoute();
+      return;
+    }
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      undoBendPoint();
+      return;
+    }
+  }
+
   if ((event.metaKey || event.ctrlKey) && key === 'z' && !isTextInput) {
     event.preventDefault();
+    if (state.draftRoute?.input === 'bend' && !event.shiftKey) {
+      undoBendPoint();
+      return;
+    }
     if (event.shiftKey) redo();
     else undo();
     return;
@@ -1730,6 +1993,10 @@ function handleKeyDown(event) {
   }
 
   if (event.key === 'Escape') {
+    if (state.draftRoute) {
+      cancelRouteDraft();
+      return;
+    }
     state.selected = null;
     state.draftRoute = null;
     state.dragging = null;
@@ -1805,15 +2072,23 @@ function syncControls() {
   const selectedRoute = state.selected?.type === 'route'
     ? play.routes.find((item) => item.id === state.selected.id)
     : null;
+  const activeRouteMode = play.routeMode || state.routeMode;
   els.playerSizeRange.value = normalizeNumber(play.playerSize, PLAYER_SIZE.default, PLAYER_SIZE.min, PLAYER_SIZE.max);
   els.endCapRange.value = normalizeNumber(play.endCapSize, END_CAP_SIZE.default, END_CAP_SIZE.min, END_CAP_SIZE.max);
   els.lineWidthRange.value = selectedRoute?.width || state.routeDefaults.width;
   els.lineColorInput.value = selectedRoute?.color || state.routeDefaults.color;
   els.defenseToggleBtn.textContent = play.defenseVisible === false ? 'Show D' : 'Hide D';
   els.selectionLabel.textContent = selectionText(play);
+  document.querySelectorAll('#editorTools [data-route-mode]').forEach((button) => {
+    button.classList.toggle('is-active', button.dataset.routeMode === activeRouteMode);
+  });
+  els.finishRouteBtn.disabled = state.draftRoute?.input !== 'bend';
+  els.undoPointBtn.disabled = state.draftRoute?.input !== 'bend';
 }
 
 function selectionText(play) {
+  if (state.draftRoute?.input === 'bend') return 'Bend: tap points, double-tap or Finish to save';
+  if (state.draftRoute?.input === 'free') return 'Free: drag to draw';
   if (!state.selected) return 'Select a player, route, defense, or note';
   if (state.selected.type === 'player') {
     const player = play.players.find((item) => item.id === state.selected.id);
@@ -1844,6 +2119,10 @@ function pushHistory() {
 
 function undo() {
   if (!ensureEditable()) return;
+  if (state.draftRoute?.input === 'bend') {
+    undoBendPoint();
+    return;
+  }
   const previous = state.history.pop();
   if (!previous) return;
   state.redoHistory.push(clone(state.book));
