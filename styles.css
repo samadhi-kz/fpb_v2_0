@@ -73,6 +73,7 @@ button {
   width: 58px;
   height: 58px;
   object-fit: cover;
+  cursor: pointer;
 }
 
 .book-title,
@@ -121,6 +122,11 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+}
+
+.play-grid.is-tree {
+  display: block;
+  color: #f6f7f8;
 }
 
 .play-card,
@@ -188,7 +194,7 @@ button {
 .editor-bottom {
   z-index: 3;
   display: grid;
-  grid-template-columns: 54px 54px minmax(0, 1fr) 64px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
   gap: 2px;
   height: 64px;
@@ -229,14 +235,108 @@ button {
   letter-spacing: 0;
 }
 
-.active-folder-label {
+.bottom-nav button.is-active {
+  color: var(--blue);
+}
+
+.tree-folder {
+  margin-bottom: 12px;
+  background: rgb(255 255 255 / 8%);
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.tree-folder.is-drag-over,
+.tree-play.is-drag-over {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+
+.tree-folder-head,
+.tree-play {
+  display: grid;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.tree-folder-head {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  min-height: 46px;
+  padding: 6px 8px 6px 12px;
+  background: rgb(255 255 255 / 10%);
+}
+
+.tree-folder-name {
   min-width: 0;
-  color: #50575c;
-  font-size: clamp(16px, 4.8vw, 20px);
-  font-weight: 700;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 900;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.tree-folder-count {
+  color: #cdd2d6;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.tree-play-list {
+  min-height: 22px;
+  padding: 4px 0;
+}
+
+.tree-empty {
+  padding: 12px;
+  color: #bbc2c7;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tree-play {
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  min-height: 44px;
+  padding: 5px 8px;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  color: #fff;
+}
+
+.tree-play-number {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 28px;
+  border-radius: 5px;
+  background: #eef1f3;
+  color: #4f565b;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.tree-play-name {
+  min-width: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-icon-btn {
+  min-width: 38px;
+  height: 30px;
+  border-radius: 5px;
+  background: rgb(255 255 255 / 16%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .category-handle,
@@ -402,9 +502,9 @@ button {
   position: absolute;
   inset: auto 0 64px;
   z-index: 4;
-  max-height: min(45dvh, 320px);
+  max-height: min(15dvh, 128px);
   overflow: auto;
-  padding: 14px 12px 48px;
+  padding: 7px 10px 10px;
   background: rgb(245 246 247 / 96%);
   box-shadow: 0 -8px 24px rgb(0 0 0 / 16%);
   transform: translateY(100%);
@@ -425,9 +525,9 @@ button {
 
 .tool-row {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   overflow: auto;
-  padding-bottom: 8px;
+  padding-bottom: 5px;
 }
 
 .action-sheet {
@@ -477,16 +577,16 @@ button {
 }
 
 .selection-label {
-  margin: 0 0 10px;
+  margin: 0 0 6px;
   color: #4f565b;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
 }
 
 .panel-title {
-  margin: 2px 0 8px;
+  margin: 1px 0 5px;
   color: #4f565b;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -494,8 +594,8 @@ button {
 .tool-row button,
 .tool-chip {
   flex: 0 0 auto;
-  min-width: 78px;
-  height: 38px;
+  min-width: 72px;
+  height: 34px;
   border-radius: 5px;
   background: #d9dee2;
   color: #4d555b;
@@ -513,16 +613,16 @@ button {
 }
 
 .formation-row button {
-  min-width: 86px;
+  min-width: 80px;
 }
 
 .formation-sections {
   display: grid;
-  gap: 10px;
+  gap: 7px;
 }
 
 .formation-section {
-  padding: 8px;
+  padding: 6px;
   border-radius: 6px;
 }
 
@@ -821,8 +921,8 @@ button {
 .tool-controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding: 2px 0 10px;
+  gap: 6px;
+  padding: 0 0 6px;
 }
 
 .tool-controls label {

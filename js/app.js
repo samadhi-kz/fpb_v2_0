@@ -60,10 +60,12 @@ const state = {
   tool: 'select',
   toolPanel: 'draw',
   routeMode: 'straight',
+  homeMode: 'grid',
   selected: null,
   dragging: null,
   draftRoute: null,
   homeDrag: null,
+  treeDrag: null,
   importMode: 'load',
   routeDefaults: {
     end: 'arrow',
@@ -87,6 +89,7 @@ const els = {
   categoryHandle: document.querySelector('#categoryHandle'),
   sheetHandle: document.querySelector('#sheetHandle'),
   activeFolderBtn: document.querySelector('#activeFolderBtn'),
+  treeViewBtn: document.querySelector('#treeViewBtn'),
   bookTitleBtn: document.querySelector('#bookTitleBtn'),
   fieldSvg: document.querySelector('#fieldSvg'),
   gridLayer: document.querySelector('#gridLayer'),
@@ -230,10 +233,16 @@ async function boot() {
   drawGrid();
 
   const shared = sharedBookFromHash();
-  if (shared) {
+  const params = new URLSearchParams(location.search);
+  const resetRequested = params.has('reset');
+  if (resetRequested) {
+    clearStoredPlaybooks();
+    history.replaceState(null, '', location.pathname);
+  }
+  if (shared && !resetRequested) {
     state.book = normalizeBook(shared.book);
     if (shared.playId) state.activePlayId = shared.playId;
-  } else if (new URLSearchParams(location.search).get('load') === 'sample') {
+  } else if (!resetRequested && params.get('load') === 'sample') {
     state.book = await loadSampleBook();
   } else {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -255,6 +264,12 @@ async function boot() {
   if (location.hash === '#editor' && state.activePlayId) openPlay(state.activePlayId);
   if (location.hash === '#categories') openCategorySheet();
   if (location.hash === '#export') openHomeExportSheet();
+}
+
+function clearStoredPlaybooks() {
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('fpb-v2-playbook')) localStorage.removeItem(key);
+  });
 }
 
 async function loadDefaultBook() {
@@ -456,8 +471,17 @@ function renderHome() {
   if (!state.book) return;
   els.bookTitleBtn.textContent = state.book.name;
   const folder = activeFolder();
-  els.activeFolderBtn.textContent = folder.name;
   els.playGrid.innerHTML = '';
+  els.playGrid.classList.toggle('is-tree', state.homeMode === 'tree');
+  els.treeViewBtn.classList.toggle('is-active', state.homeMode === 'tree');
+  document.querySelector('#allGridBtn').classList.toggle('is-active', state.homeMode === 'grid' && state.folderFilterId === 'all');
+  els.activeFolderBtn.title = folder.name;
+
+  if (state.homeMode === 'tree') {
+    renderPlayTree();
+    renderCategories();
+    return;
+  }
 
   const newCard = document.createElement('button');
   newCard.className = 'new-card';
@@ -489,6 +513,98 @@ function renderHome() {
   });
 
   renderCategories();
+}
+
+function renderPlayTree() {
+  let number = 1;
+  state.book.folders.forEach((folder) => {
+    const section = document.createElement('section');
+    section.className = 'tree-folder';
+    section.dataset.folderId = folder.id;
+    section.addEventListener('dragover', handleTreeDragOver);
+    section.addEventListener('dragleave', clearTreeDragOver);
+    section.addEventListener('drop', (event) => dropTreeItem(event, { folderId: folder.id }));
+
+    const head = document.createElement('div');
+    head.className = 'tree-folder-head';
+    head.draggable = true;
+    head.dataset.folderId = folder.id;
+    head.addEventListener('dragstart', (event) => startTreeDrag(event, { type: 'folder', folderId: folder.id }));
+    head.addEventListener('dragover', handleTreeDragOver);
+    head.addEventListener('dragleave', clearTreeDragOver);
+    head.addEventListener('drop', (event) => dropTreeItem(event, { beforeFolderId: folder.id }));
+
+    const name = document.createElement('button');
+    name.className = 'tree-folder-name';
+    name.type = 'button';
+    name.textContent = folder.name;
+    name.addEventListener('click', () => renameFolderById(folder.id));
+
+    const count = document.createElement('span');
+    count.className = 'tree-folder-count';
+    count.textContent = folder.plays.length;
+
+    const add = treeIconButton('+', 'New play', () => createPlayInFolder(folder.id));
+    const del = treeIconButton('Del', 'Delete folder', () => deleteFolderById(folder.id));
+    head.append(name, count, add, del);
+    section.append(head);
+
+    const list = document.createElement('div');
+    list.className = 'tree-play-list';
+    list.dataset.folderId = folder.id;
+    if (!folder.plays.length) {
+      const empty = document.createElement('div');
+      empty.className = 'tree-empty';
+      empty.textContent = 'Empty folder';
+      list.append(empty);
+    }
+    folder.plays.forEach((play) => {
+      list.append(treePlayRow(play, folder.id, number));
+      number += 1;
+    });
+    section.append(list);
+    els.playGrid.append(section);
+  });
+}
+
+function treePlayRow(play, folderId, number) {
+  const row = document.createElement('div');
+  row.className = 'tree-play';
+  row.draggable = true;
+  row.dataset.playId = play.id;
+  row.dataset.folderId = folderId;
+  row.addEventListener('dragstart', (event) => startTreeDrag(event, { type: 'play', playId: play.id }));
+  row.addEventListener('dragover', handleTreeDragOver);
+  row.addEventListener('dragleave', clearTreeDragOver);
+  row.addEventListener('drop', (event) => dropTreeItem(event, { folderId, beforePlayId: play.id }));
+
+  const badge = document.createElement('span');
+  badge.className = 'tree-play-number';
+  badge.textContent = number;
+
+  const name = document.createElement('button');
+  name.className = 'tree-play-name';
+  name.type = 'button';
+  name.textContent = play.name;
+  name.addEventListener('click', () => openPlay(play.id));
+
+  const rename = treeIconButton('Edit', 'Rename play', () => renamePlayById(play.id));
+  const del = treeIconButton('Del', 'Delete play', () => deletePlayById(play.id));
+  row.append(badge, name, rename, del);
+  return row;
+}
+
+function treeIconButton(label, title, onClick) {
+  const button = document.createElement('button');
+  button.className = 'tree-icon-btn';
+  button.type = 'button';
+  button.textContent = label;
+  button.title = title;
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    onClick();
+  });
+  return button;
 }
 
 function renderCategories() {
@@ -616,6 +732,82 @@ function applyHomeOrder(order) {
   });
 }
 
+function startTreeDrag(event, payload) {
+  state.treeDrag = payload;
+  event.dataTransfer?.setData('text/plain', JSON.stringify(payload));
+  event.dataTransfer?.setDragImage?.(event.currentTarget, 20, 20);
+  event.dataTransfer.effectAllowed = 'move';
+}
+
+function handleTreeDragOver(event) {
+  if (!state.treeDrag) return;
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.classList.add('is-drag-over');
+}
+
+function clearTreeDragOver(event) {
+  event.currentTarget.classList.remove('is-drag-over');
+}
+
+function dropTreeItem(event, target) {
+  event.preventDefault();
+  event.stopPropagation();
+  document.querySelectorAll('.is-drag-over').forEach((item) => item.classList.remove('is-drag-over'));
+  const payload = state.treeDrag || parseTreeDragPayload(event);
+  state.treeDrag = null;
+  if (!payload) return;
+  if (payload.type === 'play') {
+    movePlayInTree(payload.playId, target.folderId, target.beforePlayId);
+  }
+  if (payload.type === 'folder') {
+    moveFolderInTree(payload.folderId, target.beforeFolderId);
+  }
+}
+
+function parseTreeDragPayload(event) {
+  try {
+    return JSON.parse(event.dataTransfer?.getData('text/plain') || '');
+  } catch {
+    return null;
+  }
+}
+
+function movePlayInTree(playId, targetFolderId, beforePlayId = '') {
+  const sourceFolder = folderForPlay(playId);
+  const targetFolder = state.book.folders.find((folder) => folder.id === targetFolderId) || sourceFolder;
+  const play = sourceFolder?.plays.find((item) => item.id === playId);
+  if (!sourceFolder || !targetFolder || !play || playId === beforePlayId) return;
+  pushHistory();
+  sourceFolder.plays = sourceFolder.plays.filter((item) => item.id !== playId);
+  const insertAt = beforePlayId ? targetFolder.plays.findIndex((item) => item.id === beforePlayId) : -1;
+  if (insertAt >= 0) targetFolder.plays.splice(insertAt, 0, play);
+  else targetFolder.plays.push(play);
+  state.activeFolderId = targetFolder.id;
+  state.folderFilterId = 'all';
+  syncPlayOrderFromFolders();
+  persist();
+  renderHome();
+}
+
+function moveFolderInTree(folderId, beforeFolderId = '') {
+  if (!beforeFolderId || folderId === beforeFolderId) return;
+  const from = state.book.folders.findIndex((folder) => folder.id === folderId);
+  const to = state.book.folders.findIndex((folder) => folder.id === beforeFolderId);
+  if (from < 0 || to < 0) return;
+  pushHistory();
+  const [folder] = state.book.folders.splice(from, 1);
+  const nextTo = state.book.folders.findIndex((item) => item.id === beforeFolderId);
+  state.book.folders.splice(nextTo, 0, folder);
+  syncPlayOrderFromFolders();
+  persist();
+  renderHome();
+}
+
+function syncPlayOrderFromFolders() {
+  state.book.playOrder = state.book.folders.flatMap((folder) => folder.plays.map((play) => play.id));
+}
+
 function renderThumb(play, number) {
   const svg = svgEl('svg', { class: 'thumb', viewBox: '190 42 620 638' });
   svg.append(...fieldGridNodes(true));
@@ -626,6 +818,30 @@ function renderThumb(play, number) {
   play.routes.forEach((item) => svg.append(routeNode(item, play, 0.72, false)));
   if (play.defenseVisible !== false) play.defenders.forEach((item) => svg.append(defenderNode(item, play, 0.75, false)));
   play.players.forEach((item) => svg.append(playerNode(item, play, 0.9, false)));
+  return svg;
+}
+
+function renderPrintDiagram(play, number) {
+  const svg = svgEl('svg', { class: 'print-diagram', viewBox: '115 20 770 670' });
+  svg.append(...fieldGridNodes(false));
+  const badge = svgEl('rect', { x: 130, y: 32, width: 70, height: 54, rx: 5, fill: '#eeeeee', opacity: '0.96' });
+  const num = svgEl('text', { x: 165, y: 71, 'text-anchor': 'middle', fill: '#4f565b', 'font-size': 42, 'font-weight': 900 });
+  num.textContent = number;
+  svg.append(badge, num);
+  if (play.defenseVisible !== false) play.defenders.forEach((item) => svg.append(defenderNode(item, play, 1, false)));
+  play.routes.forEach((item) => svg.append(routeNode(item, play, 1, false)));
+  play.players.forEach((item) => svg.append(playerNode(item, play, 1, false)));
+  play.annotations.forEach((item) => {
+    const group = svgEl('g', {});
+    const text = svgEl('text', { x: item.x, y: item.y, fill: '#101010', 'font-size': 26, 'font-weight': 800 });
+    splitLines(item.text).forEach((line, index) => {
+      const tspan = svgEl('tspan', { x: item.x, dy: index === 0 ? 0 : 30 });
+      tspan.textContent = line;
+      text.append(tspan);
+    });
+    group.append(text);
+    svg.append(group);
+  });
   return svg;
 }
 
@@ -1007,9 +1223,12 @@ function bindEvents() {
   els.categoryHandle.addEventListener('click', openCategorySheet);
   els.sheetHandle.addEventListener('click', closeCategorySheet);
   els.activeFolderBtn.addEventListener('click', openCategorySheet);
+  els.treeViewBtn.addEventListener('click', toggleTreeView);
   els.bookTitleBtn.addEventListener('click', renameBook);
+  document.querySelectorAll('.app-icon').forEach((icon) => icon.addEventListener('click', resetAppToHome));
   document.querySelector('#editCategoriesBtn').addEventListener('click', editCategories);
   document.querySelector('#allGridBtn').addEventListener('click', () => {
+    state.homeMode = 'grid';
     state.folderFilterId = 'all';
     renderHome();
     persist();
@@ -1099,6 +1318,20 @@ function openCategorySheet() {
 function closeCategorySheet() {
   els.categorySheet.classList.remove('is-open');
   els.categoryHandle.setAttribute('aria-expanded', 'false');
+}
+
+function toggleTreeView() {
+  state.homeMode = state.homeMode === 'tree' ? 'grid' : 'tree';
+  renderHome();
+}
+
+function resetAppToHome() {
+  if (!confirm('Reset to the empty FPB v2 home screen? Current browser-saved playbook data on this site will be cleared.')) return;
+  clearStoredPlaybooks();
+  const resetUrl = new URL('https://samadhi-kz.github.io/fpb_v2_0/');
+  resetUrl.searchParams.set('reset', Date.now().toString());
+  resetUrl.searchParams.set('v', Date.now().toString());
+  location.href = resetUrl.toString();
 }
 
 function toggleToolSheet() {
@@ -1218,6 +1451,7 @@ function createPlay() {
   state.activeFolderId = folder.id;
   state.folderFilterId = folder.id;
   state.activePlayId = play.id;
+  syncPlayOrderFromFolders();
   persist();
   openPlay(play.id);
 }
@@ -1235,6 +1469,19 @@ function createFolder() {
   renderHome();
 }
 
+function createPlayInFolder(folderId) {
+  const folder = state.book.folders.find((item) => item.id === folderId);
+  if (!folder) return;
+  const play = defaultPlay('New Offensive Play');
+  pushHistory();
+  folder.plays.push(play);
+  state.activeFolderId = folder.id;
+  state.activePlayId = play.id;
+  syncPlayOrderFromFolders();
+  persist();
+  renderHome();
+}
+
 function duplicatePlay() {
   if (!ensureEditable()) return;
   const source = activePlay();
@@ -1247,6 +1494,30 @@ function duplicatePlay() {
   folder.plays.unshift(copy);
   state.activeFolderId = folder.id;
   state.activePlayId = copy.id;
+  syncPlayOrderFromFolders();
+  persist();
+  renderAll();
+}
+
+function renamePlayById(playId) {
+  const play = allPlays().find((item) => item.play.id === playId)?.play;
+  if (!play) return;
+  const name = prompt('Play name', play.name);
+  if (!name) return;
+  pushHistory();
+  play.name = name.trim() || play.name;
+  persist();
+  renderAll();
+}
+
+function deletePlayById(playId) {
+  const item = allPlays().find((entry) => entry.play.id === playId);
+  if (!item) return;
+  if (!confirm(`Delete "${item.play.name}"?`)) return;
+  pushHistory();
+  item.folder.plays = item.folder.plays.filter((play) => play.id !== playId);
+  if (state.activePlayId === playId) state.activePlayId = allPlays()[0]?.play.id || '';
+  syncPlayOrderFromFolders();
   persist();
   renderAll();
 }
@@ -1277,6 +1548,7 @@ function deleteSelectedOrPlay() {
     folder.plays = folder.plays.filter((item) => item.id !== play.id);
   });
   state.activePlayId = allPlays()[0]?.play.id || '';
+  syncPlayOrderFromFolders();
   persist();
   showHome();
 }
@@ -1297,6 +1569,7 @@ function moveActivePlay() {
   target.plays.unshift(play);
   state.activeFolderId = target.id;
   state.folderFilterId = target.id;
+  syncPlayOrderFromFolders();
   persist();
   renderAll();
 }
@@ -1323,6 +1596,17 @@ function renameActiveFolder() {
   renderHome();
 }
 
+function renameFolderById(folderId) {
+  const folder = state.book.folders.find((item) => item.id === folderId);
+  if (!folder) return;
+  const name = prompt('Folder name', folder.name);
+  if (!name) return;
+  pushHistory();
+  folder.name = name.trim() || folder.name;
+  persist();
+  renderHome();
+}
+
 function editCategories() {
   if (!ensureEditable()) return;
   const action = prompt('Category command: new / rename / delete', 'rename');
@@ -1343,6 +1627,21 @@ function deleteActiveFolder() {
   state.activeFolderId = state.book.folders[0].id;
   state.folderFilterId = 'all';
   state.activePlayId = allPlays()[0]?.play.id || '';
+  syncPlayOrderFromFolders();
+  persist();
+  renderAll();
+}
+
+function deleteFolderById(folderId) {
+  const folder = state.book.folders.find((item) => item.id === folderId);
+  if (!folder || state.book.folders.length <= 1) return;
+  if (!confirm(`Delete folder "${folder.name}" and its plays?`)) return;
+  pushHistory();
+  state.book.folders = state.book.folders.filter((item) => item.id !== folderId);
+  state.activeFolderId = state.book.folders[0].id;
+  state.folderFilterId = 'all';
+  state.activePlayId = allPlays()[0]?.play.id || '';
+  syncPlayOrderFromFolders();
   persist();
   renderAll();
 }
@@ -2283,18 +2582,20 @@ function printBook() {
   }
   const plays = allPlays();
   const pages = plays.map(({ folder, play }, index) => {
-    const svg = renderThumb(play, index + 1);
-    svg.setAttribute('viewBox', '0 0 1000 760');
-    svg.classList.remove('thumb');
+    const svg = renderPrintDiagram(play, index + 1);
     const notes = escapeHtml(play.notes || '').replace(/\n/g, '<br>');
-    return `<section class="page"><h1>${escapeHtml(play.name)}</h1><p class="folder">${escapeHtml(folder.name)}</p>${svg.outerHTML}<h2>Play Notes</h2><div class="notes">${notes}</div></section>`;
+    return `<section class="page"><header><h1>${escapeHtml(play.name)}</h1><p>${escapeHtml(folder.name)}</p></header>${svg.outerHTML}<section class="print-notes"><h2>Play Notes</h2><div>${notes}</div></section></section>`;
   }).join('');
   win.document.write(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>${escapeHtml(state.book.name)}</title><style>
+    @page{size:A4 portrait;margin:10mm}
+    *{box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Yu Gothic",sans-serif;margin:0;color:#30363b}
-    .page{page-break-after:always;padding:24px}
-    h1{margin:0 0 4px;font-size:28px}.folder{margin:0 0 16px;color:#6f7a84;font-weight:700}
-    svg{width:100%;max-width:720px;display:block;margin:0 auto 16px}
-    h2{font-size:16px;color:#6f7a84}.notes{font-size:18px;font-weight:700;line-height:1.5;white-space:normal}
+    .page{break-after:page;page-break-after:always;height:277mm;overflow:hidden;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:4mm}
+    header{display:flex;align-items:flex-end;justify-content:space-between;gap:8mm;border-bottom:1px solid #d9dee2;padding-bottom:2mm}
+    h1{margin:0;font-size:18pt;line-height:1.15}header p{margin:0;color:#6f7a84;font-size:10pt;font-weight:700}
+    .print-diagram{width:100%;height:100%;max-height:190mm;display:block;align-self:center}
+    .print-notes{max-height:60mm;overflow:hidden;border-top:1px solid #d9dee2;padding-top:2mm}
+    h2{margin:0 0 2mm;font-size:10pt;color:#6f7a84}.print-notes div{font-size:11pt;font-weight:700;line-height:1.35;white-space:normal}
   </style></head><body>${pages}</body></html>`);
   win.document.close();
   win.focus();

@@ -21,6 +21,7 @@ The initial playbook is intentionally empty. Load a JSON playbook when you want 
 - Create and organize playbooks with folders
 - Load, add, and save playbook JSON
 - View plays as thumbnails on the Home screen
+- Switch Home to a tree view for folder/play ordering and quick edits
 - Open categories by pulling up the bottom handle
 - Draw routes, motions, passes, blocks, and text comments
 - Choose Straight, Bend, or Free line drawing
@@ -35,7 +36,7 @@ The initial playbook is intentionally empty. Load a JSON playbook when you want 
 - Share one-play links and full-book links
 - Export long book links as text files
 - Save diagrams as PNG
-- Print one play or the full book as PDF through the browser print dialog
+- Print one play or the full book as PDF through the browser print dialog, one play per A4-style page with notes
 
 ## Usage
 
@@ -52,9 +53,16 @@ The initial playbook is intentionally empty. Load a JSON playbook when you want 
    - **Export**: links, JSON, PNG, and PDF/print
    - **Flip**: mirror the play horizontally
    - **Lock**: long-press to switch view/edit mode
-6. Tap a line or player to open the edit popup for that item.
-7. Edit notes directly below the field.
-8. Save your playbook with **Export > Save JSON**.
+6. On Home, tap **Tree** to edit folder/play names, delete items, add plays to a folder, or drag plays/folders into a new order.
+7. Tap a line or player to open the edit popup for that item.
+8. Edit notes directly below the field.
+9. Save your playbook with **Export > Save JSON**.
+
+## GitHub Pages Cache
+
+The HTML references CSS and JavaScript with a version query so normal GitHub Pages checks should pick up fresh assets after each push.
+
+If the browser still shows old saved playbook data, tap the app icon in the top-left corner and confirm reset. This clears FPB v2 local storage on the site and reloads the app with a cache-busting URL.
 
 ## Keyboard Shortcuts
 
@@ -112,12 +120,14 @@ Manual checks:
 - Confirm the initial playbook is empty
 - Load `plays/KS-playcall.json`
 - Confirm 27 plays appear across 7 folders
+- Switch to Tree and confirm folder/play rename, delete, add, and drag ordering work
 - Open a play and verify routes, players, defense, and notes render
 - Draw a route, change its end from `T` to `Arrow`, and confirm the old `T` end disappears
 - Draw Bend and Free routes, then confirm the route can be selected, moved, edited, and deleted
 - Select a route and confirm `Delete`, undo, and redo work
 - Select a player and confirm number/shape changes work
 - Long-press **Lock**, confirm editing is blocked, and confirm **Flip** still works
+- Export **PDF Book** and confirm each play plus notes stays on one A4-style page
 - Draw a route, use Flip, and save JSON
 - Reopen the saved JSON and confirm the edits remain
 
