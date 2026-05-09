@@ -14,7 +14,6 @@ FPB v2 keeps the playbook workflow from `fpb` but uses a simpler two-screen UI:
 The initial playbook is intentionally empty. Load a JSON playbook when you want to work with existing data. A bundled sample is available at:
 
 ```text
-plays/KS-playcall.json
 ```
 
 ## Features
