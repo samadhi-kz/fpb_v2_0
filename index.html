@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#d8d8d8">
+    <title>FPB v2</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="phone-shell" aria-label="Flag Play Board v2">
+      <section id="homeView" class="screen home-screen is-active" aria-label="Play list">
+        <header class="topbar">
+          <img class="app-icon" src="UI_example/download.jpg" alt="">
+          <button id="bookTitleBtn" class="book-title" type="button">KSプレーコール2026春__UCオレ</button>
+        </header>
+
+        <div class="play-grid-wrap">
+          <div id="playGrid" class="play-grid" aria-label="Plays"></div>
+        </div>
+
+        <button id="categoryHandle" class="category-handle" type="button" aria-expanded="false" aria-controls="categorySheet">
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav class="bottom-nav" aria-label="Home commands">
+          <button id="allGridBtn" type="button" title="一覧"><span class="bar-label">All</span></button>
+          <button id="openJsonHomeBtn" type="button" title="JSON読込"><span class="bar-label">Load</span></button>
+          <button id="activeFolderBtn" class="active-folder-label" type="button">All Offensive Plays</button>
+          <button id="exportBtn" type="button" title="書き出し"><span class="bar-label">Export</span></button>
+        </nav>
+
+        <aside id="categorySheet" class="category-sheet" aria-label="Categories">
+          <button id="sheetHandle" class="sheet-handle" type="button" aria-label="Close categories">
+            <span></span><span></span><span></span>
+          </button>
+          <div id="categoryList" class="category-list"></div>
+          <button id="editCategoriesBtn" class="edit-categories" type="button">
+            <span class="stack-icon"></span>
+            Edit Categories
+          </button>
+        </aside>
+      </section>
+
+      <section id="editorView" class="screen editor-screen" aria-label="Play editor">
+        <header class="editor-topbar">
+          <img class="app-icon" src="UI_example/download.jpg" alt="">
+          <textarea id="playNameInput" class="play-name-input" aria-label="Play name" rows="2"></textarea>
+          <button id="backToBookBtn" class="playbook-button" type="button">Playbook</button>
+        </header>
+
+        <div class="field-stage">
+          <svg id="fieldSvg" class="field" viewBox="115 20 770 670" role="img" aria-label="Flag football field">
+            <g id="gridLayer"></g>
+            <g id="routeLayer"></g>
+            <g id="defenseLayer"></g>
+            <g id="playerLayer"></g>
+            <g id="annotationLayer"></g>
+            <g id="handleLayer"></g>
+          </svg>
+        </div>
+
+        <section class="notes">
+          <h2>Play Notes</h2>
+          <textarea id="notesInput" aria-label="Play notes"></textarea>
+        </section>
+
+        <button id="editorHandle" class="editor-handle" type="button" aria-expanded="false" aria-controls="editorTools">
+          <span></span><span></span><span></span>
+        </button>
+
+        <nav class="editor-bottom" aria-label="Editor commands">
+          <button id="undoBtn" type="button" title="Undo"><span class="bar-label">↶</span></button>
+          <button id="redoBtn" type="button" title="Redo"><span class="bar-label">↷</span></button>
+          <button id="drawToolsBtn" type="button" title="Draw"><span class="bar-label">Draw</span></button>
+          <button id="formationBtn" type="button" title="Formation"><span class="bar-label">Form</span></button>
+          <button id="editActionsBtn" type="button" title="Edit"><span class="bar-label">Edit</span></button>
+          <button id="exportActionsBtn" type="button" title="Export"><span class="bar-label">Export</span></button>
+          <button id="flipQuickBtn" type="button" title="Flip H"><span class="bar-label">Flip</span></button>
+          <button id="lockBtn" type="button" title="Long press to switch edit/view mode"><span id="lockLabel" class="bar-label">Lock</span></button>
+        </nav>
+
+        <aside id="selectionPopover" class="selection-popover" aria-label="Selection editor" hidden>
+          <div class="selection-popover-head">
+            <strong id="selectionPopoverTitle">Selection</strong>
+            <button id="closeSelectionPopover" type="button" aria-label="Close selection editor">×</button>
+          </div>
+          <div id="routeInspector" class="inspector-panel" hidden>
+            <div class="inspector-group">
+              <span class="inspector-label">Line Type</span>
+              <div class="visual-row">
+                <button type="button" data-route-type="route"><span class="line-sample line-route"></span><span>Route</span></button>
+                <button type="button" data-route-type="motion"><span class="line-sample line-motion"></span><span>Motion</span></button>
+                <button type="button" data-route-type="pass"><span class="line-sample line-pass"></span><span>Pass</span></button>
+                <button type="button" data-route-type="block"><span class="line-sample line-block"></span><span>Block</span></button>
+              </div>
+            </div>
+            <div class="inspector-group">
+              <span class="inspector-label">End</span>
+              <div class="visual-row">
+                <button type="button" data-end="arrow"><span class="end-sample end-arrow"></span><span>Arrow</span></button>
+                <button type="button" data-end="t"><span class="end-sample end-t"></span><span>T</span></button>
+                <button type="button" data-end="dot"><span class="end-sample end-dot"></span><span>Dot</span></button>
+                <button type="button" data-end="none"><span class="end-sample end-none"></span><span>None</span></button>
+              </div>
+            </div>
+            <div class="inspector-group">
+              <span class="inspector-label">Line</span>
+              <div class="visual-row">
+                <button type="button" data-route-width="4"><span class="weight-sample weight-thin"></span><span>Thin</span></button>
+                <button type="button" data-route-width="6"><span class="weight-sample weight-mid"></span><span>Med</span></button>
+                <button type="button" data-route-width="10"><span class="weight-sample weight-heavy"></span><span>Heavy</span></button>
+                <button type="button" data-route-color="#101010"><span class="color-dot color-black"></span><span>Black</span></button>
+                <button type="button" data-route-color="#ef0000"><span class="color-dot color-red"></span><span>Red</span></button>
+                <button type="button" data-route-color="#1d66d1"><span class="color-dot color-blue"></span><span>Blue</span></button>
+                <button type="button" data-selection-delete="true">Delete</button>
+              </div>
+            </div>
+          </div>
+          <div id="playerInspector" class="inspector-panel" hidden>
+            <div class="inspector-group">
+              <span class="inspector-label">Number</span>
+              <div class="visual-row number-row">
+                <button type="button" data-player-label="1">1</button>
+                <button type="button" data-player-label="2">2</button>
+                <button type="button" data-player-label="3">3</button>
+                <button type="button" data-player-label="4">4</button>
+                <button type="button" data-player-label="5">5</button>
+              </div>
+            </div>
+            <div class="inspector-group">
+              <span class="inspector-label">Shape</span>
+              <div class="visual-row">
+                <button type="button" data-mark="circle"><span class="shape-sample shape-circle">1</span><span>Circle</span></button>
+                <button type="button" data-mark="star"><span class="shape-sample shape-star">1</span><span>Star</span></button>
+                <button type="button" data-mark="diamond"><span class="shape-sample shape-diamond">1</span><span>Diamond</span></button>
+                <button type="button" data-mark="square"><span class="shape-sample shape-square">1</span><span>Square</span></button>
+              </div>
+            </div>
+          </div>
+          <div id="annotationInspector" class="inspector-panel" hidden>
+            <div class="visual-row">
+              <button id="editNoteBtn" type="button">Edit Text</button>
+              <button id="deleteSelectionBtn" type="button" data-selection-delete="true">Delete</button>
+            </div>
+          </div>
+        </aside>
+
+        <aside id="editorTools" class="tool-sheet" aria-label="Editor tools">
+          <div id="selectionLabel" class="selection-label">Select a player, route, defense, or note</div>
+          <div class="tool-panel" data-tool-panel="draw">
+            <div class="panel-title">Draw Lines</div>
+            <div class="tool-row">
+              <button class="tool-chip is-active" type="button" data-tool="select">Select</button>
+              <button class="tool-chip visual-chip" type="button" data-tool="route"><span class="line-sample line-route"></span><span>Route</span></button>
+              <button class="tool-chip visual-chip" type="button" data-tool="motion"><span class="line-sample line-motion"></span><span>Motion</span></button>
+              <button class="tool-chip visual-chip" type="button" data-tool="block"><span class="line-sample line-block"></span><span>Block</span></button>
+              <button class="tool-chip visual-chip" type="button" data-tool="pass"><span class="line-sample line-pass"></span><span>Pass</span></button>
+              <button class="tool-chip" type="button" data-tool="text">Text</button>
+            </div>
+            <div class="panel-title">Player Shape / Line End</div>
+            <div class="tool-row">
+              <button class="visual-chip" type="button" data-mark="circle"><span class="shape-sample shape-circle">1</span><span>Circle</span></button>
+              <button class="visual-chip" type="button" data-mark="star"><span class="shape-sample shape-star">1</span><span>Star</span></button>
+              <button class="visual-chip" type="button" data-mark="diamond"><span class="shape-sample shape-diamond">1</span><span>Diamond</span></button>
+              <button class="visual-chip" type="button" data-mark="square"><span class="shape-sample shape-square">1</span><span>Square</span></button>
+              <button class="visual-chip" type="button" data-end="arrow"><span class="end-sample end-arrow"></span><span>Arrow</span></button>
+              <button class="visual-chip" type="button" data-end="t"><span class="end-sample end-t"></span><span>T</span></button>
+              <button class="visual-chip" type="button" data-end="dot"><span class="end-sample end-dot"></span><span>Dot</span></button>
+              <button class="visual-chip" type="button" data-end="none"><span class="end-sample end-none"></span><span>None</span></button>
+            </div>
+            <div class="tool-controls">
+              <label>Player <input id="playerSizeRange" type="range" min="12" max="44" value="25"></label>
+              <label>End <input id="endCapRange" type="range" min="0.5" max="2" step="0.1" value="0.9"></label>
+              <label>Line <input id="lineWidthRange" type="range" min="2" max="16" value="6"></label>
+              <label>Color <input id="lineColorInput" type="color" value="#101010"></label>
+            </div>
+          </div>
+          <div class="tool-panel" data-tool-panel="formation" hidden>
+            <div class="formation-sections">
+              <section class="formation-section offense-section" aria-label="Offense formations">
+                <div class="panel-title">Offense</div>
+                <div class="tool-row formation-row">
+                  <button type="button" data-formation="singleBack">Single</button>
+                  <button type="button" data-formation="spread">Spread</button>
+                  <button type="button" data-formation="twins">Twins</button>
+                  <button type="button" data-formation="twinsStack">Stack</button>
+                  <button type="button" data-formation="trips">Trips</button>
+                  <button type="button" data-formation="bunch">Bunch</button>
+                  <button type="button" data-formation="tight">Tight</button>
+                  <button type="button" data-formation="doubleBack">Double</button>
+                  <button type="button" data-formation="iFormation">I</button>
+                  <button type="button" data-action="qb-setback">Setback</button>
+                  <button type="button" data-action="qb-shotgun">Shotgun</button>
+                </div>
+              </section>
+              <section class="formation-section defense-section" aria-label="Defense formations">
+                <div class="panel-title">Defense</div>
+                <div class="tool-row formation-row">
+                  <button type="button" data-defense-formation="normal">D Normal</button>
+                  <button type="button" data-defense-formation="man0">Man 0</button>
+                  <button type="button" data-defense-formation="oneDeep">1 Deep</button>
+                  <button type="button" data-defense-formation="cover2">Cover 2</button>
+                  <button type="button" data-defense-formation="cover3">Cover 3</button>
+                  <button type="button" data-defense-formation="boxZone">Box</button>
+                  <button type="button" data-defense-formation="goalLine">Goal</button>
+                  <button type="button" data-defense-formation="prevent">Prevent</button>
+                  <button id="defenseToggleBtn" type="button">Hide D</button>
+                </div>
+              </section>
+            </div>
+          </div>
+          <div class="tool-panel" data-tool-panel="edit" hidden>
+            <div class="tool-row">
+              <button id="duplicateBtn" type="button">Duplicate</button>
+              <button id="deleteBtn" type="button">Delete</button>
+              <button id="clearLinesBtn" type="button">Clear Lines</button>
+              <button id="resetPlayBtn" type="button">Reset Play</button>
+              <button id="newPlayBtn" type="button">New Play</button>
+              <button id="newFolderBtn" type="button">New Folder</button>
+              <button id="movePlayBtn" type="button">Move Play</button>
+              <button id="renameFolderBtn" type="button">Rename Folder</button>
+            </div>
+          </div>
+          <div class="tool-panel" data-tool-panel="export" hidden>
+            <div class="tool-row">
+              <button id="sharePlayBtn" type="button">1 Play Link</button>
+              <button id="shareBookBtn" type="button">Book Link</button>
+              <button id="printPlayBtn" type="button">PDF/Print</button>
+              <button id="printBookBtn" type="button">PDF Book</button>
+              <button id="savePhotoBtn" type="button">Save Photo</button>
+              <button id="saveJsonBtn" type="button">Save JSON</button>
+              <button id="addJsonBtn" type="button">Add JSON</button>
+              <button id="loadJsonBtn" type="button">Load JSON</button>
+            </div>
+          </div>
+        </aside>
+      </section>
+      <aside id="homeExportSheet" class="action-sheet" aria-label="Export options" hidden>
+        <button id="closeHomeExportSheet" class="action-backdrop" type="button" aria-label="Close export menu"></button>
+        <div class="action-menu">
+          <button type="button" data-home-export="book-link">Book Link</button>
+          <button type="button" data-home-export="link-txt">Link TXT</button>
+          <button type="button" data-home-export="json">Save JSON</button>
+          <button type="button" data-home-export="pdf-book">PDF Book</button>
+        </div>
+      </aside>
+      <input id="jsonInput" class="visually-hidden" type="file" accept=".json,application/json">
+    </main>
+
+    <script src="js/default-book.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>
