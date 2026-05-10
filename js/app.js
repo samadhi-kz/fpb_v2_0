@@ -20,6 +20,8 @@ const MARKS = new Set(['circle', 'ring', 'star', 'diamond', 'square']);
 const ROUTE_ENDS = new Set(['arrow', 't', 'dot', 'none']);
 const DRAW_TOOLS = new Set(['route', 'motion', 'block', 'pass']);
 const ROUTE_MODES = new Set(['straight', 'bend', 'free']);
+const FIELD_VIEWBOX_NORMAL = '115 20 770 670';
+const FIELD_VIEWBOX_FULL = '215 30 570 650';
 
 function fieldX(yardsFromLeft) {
   return field.left + (yardsFromLeft / 25) * (field.right - field.left);
@@ -75,6 +77,7 @@ const state = {
   history: [],
   redoHistory: [],
   locked: false,
+  fullFieldMode: false,
   lockPressTimer: null,
   lockPressFired: false,
   selectionPopoverDismissedKey: ''
@@ -99,6 +102,7 @@ const els = {
   playerLayer: document.querySelector('#playerLayer'),
   annotationLayer: document.querySelector('#annotationLayer'),
   handleLayer: document.querySelector('#handleLayer'),
+  playOrderBadge: document.querySelector('#playOrderBadge'),
   playNameInput: document.querySelector('#playNameInput'),
   notesInput: document.querySelector('#notesInput'),
   editorTools: document.querySelector('#editorTools'),
@@ -120,6 +124,7 @@ const els = {
   lockLabel: document.querySelector('#lockLabel'),
   undoBtn: document.querySelector('#undoBtn'),
   redoBtn: document.querySelector('#redoBtn'),
+  fullFieldBtn: document.querySelector('#fullFieldBtn'),
   drawToolsBtn: document.querySelector('#drawToolsBtn'),
   formationBtn: document.querySelector('#formationBtn'),
   editActionsBtn: document.querySelector('#editActionsBtn'),
@@ -454,6 +459,13 @@ function activeFolder() {
   if (!state.book) return { id: 'all', name: 'All Offensive Plays', plays: [] };
   if (state.folderFilterId === 'all') return { id: 'all', name: 'All Offensive Plays', plays: allPlays().map((item) => item.play) };
   return state.book.folders.find((folder) => folder.id === state.folderFilterId) || state.book.folders[0];
+}
+
+function playOrderNumber(playId) {
+  const scopedIndex = activeFolder().plays.findIndex((play) => play.id === playId);
+  if (scopedIndex >= 0) return scopedIndex + 1;
+  const globalIndex = allPlays().findIndex((item) => item.play.id === playId);
+  return globalIndex >= 0 ? globalIndex + 1 : '';
 }
 
 function folderForPlay(playId) {
@@ -854,11 +866,15 @@ function renderPrintDiagram(play, number) {
 function renderEditor() {
   const play = activePlay();
   if (!play) {
+    if (els.playOrderBadge) els.playOrderBadge.textContent = '';
     syncLockUI();
+    syncFullFieldUI();
     if (els.selectionPopover) els.selectionPopover.hidden = true;
+    syncEditorLayoutState();
     return;
   }
   els.playNameInput.value = play.name;
+  els.playOrderBadge.textContent = playOrderNumber(play.id);
   els.notesInput.value = play.notes || '';
   drawRoutes(play);
   drawDefense(play);
@@ -867,7 +883,9 @@ function renderEditor() {
   drawSelectionHandles(play);
   syncControls();
   syncLockUI();
+  syncFullFieldUI();
   syncSelectionPopover(play);
+  syncEditorLayoutState();
 }
 
 function drawGrid() {
@@ -884,6 +902,7 @@ function drawGrid() {
   ].forEach(([text, yards]) => {
     const y = fieldY(yards);
     const label = svgEl('text', {
+      class: 'field-label',
       x: field.left - 20,
       y: yards === 0 ? y - 14 : y - 8,
       fill: '#7b8794',
@@ -905,6 +924,7 @@ function drawGrid() {
     const isLeft = yards === 0;
     const isRight = yards === 25;
     const label = svgEl('text', {
+      class: 'field-label',
       x: fieldX(yards) + (isLeft ? -10 : isRight ? 10 : 4),
       y: isLeft || isRight ? field.top + 22 : field.top - 10,
       fill: '#7b8794',
@@ -1072,7 +1092,12 @@ function dotEndNode(points, item, play, scale) {
 }
 
 function lastSegment(points) {
-  return [points[points.length - 2], points[points.length - 1]];
+  for (let index = points.length - 1; index > 0; index -= 1) {
+    const end = points[index];
+    const prev = points[index - 1];
+    if (Math.hypot(end[0] - prev[0], end[1] - prev[1]) > 0.5) return [prev, end];
+  }
+  return [points[0], points[points.length - 1]];
 }
 
 function motionPoints(points) {
@@ -1243,6 +1268,7 @@ function bindEvents() {
     persist();
   });
   document.querySelector('#backToBookBtn').addEventListener('click', showHome);
+  els.fullFieldBtn.addEventListener('click', toggleFullFieldMode);
   document.querySelector('#exportBtn').addEventListener('click', openHomeExportSheet);
   document.querySelector('#closeHomeExportSheet').addEventListener('click', closeHomeExportSheet);
   document.querySelector('#duplicateBtn').addEventListener('click', duplicatePlay);
@@ -1374,10 +1400,15 @@ function toggleToolSheet() {
   if (isEditorLocked()) return;
   els.editorTools.classList.toggle('is-open');
   els.editorHandle?.setAttribute('aria-expanded', String(els.editorTools.classList.contains('is-open')));
+  syncEditorLayoutState();
 }
 
 function openToolPanel(panel) {
   if (isEditorLocked()) return;
+  if (els.selectionPopover && !els.selectionPopover.hidden) {
+    state.selectionPopoverDismissedKey = selectedKey();
+    els.selectionPopover.hidden = true;
+  }
   const wasOpen = els.editorTools.classList.contains('is-open');
   const samePanel = state.toolPanel === panel;
   state.toolPanel = panel;
@@ -1395,6 +1426,27 @@ function openToolPanel(panel) {
   });
   els.editorTools.classList.toggle('is-open', !wasOpen || !samePanel);
   els.editorHandle?.setAttribute('aria-expanded', String(els.editorTools.classList.contains('is-open')));
+  syncEditorLayoutState();
+}
+
+function toggleFullFieldMode() {
+  state.fullFieldMode = !state.fullFieldMode;
+  syncFullFieldUI();
+  syncEditorLayoutState();
+}
+
+function syncFullFieldUI() {
+  els.editorView.classList.toggle('is-full-field', state.fullFieldMode);
+  els.fullFieldBtn.classList.toggle('is-active', state.fullFieldMode);
+  els.fullFieldBtn.setAttribute('aria-pressed', String(state.fullFieldMode));
+  els.fullFieldBtn.title = state.fullFieldMode ? 'Normal field' : 'Full field';
+  els.fieldSvg.setAttribute('viewBox', state.fullFieldMode ? FIELD_VIEWBOX_FULL : FIELD_VIEWBOX_NORMAL);
+}
+
+function syncEditorLayoutState() {
+  const hasToolPanel = els.editorTools.classList.contains('is-open');
+  const hasSelectionPanel = Boolean(els.selectionPopover && !els.selectionPopover.hidden);
+  els.editorView.classList.toggle('has-bottom-panel', hasToolPanel || hasSelectionPanel);
 }
 
 function startLockPress() {
@@ -1458,6 +1510,7 @@ function syncLockUI() {
     els.editorHandle?.setAttribute('aria-expanded', 'false');
     if (els.selectionPopover) els.selectionPopover.hidden = true;
   }
+  syncEditorLayoutState();
 }
 
 function showHome() {
@@ -2225,6 +2278,7 @@ function selectedKey() {
 function closeSelectionPopover() {
   state.selectionPopoverDismissedKey = selectedKey();
   if (els.selectionPopover) els.selectionPopover.hidden = true;
+  syncEditorLayoutState();
 }
 
 function syncSelectionPopover(play) {

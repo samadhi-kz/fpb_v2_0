@@ -63,7 +63,7 @@ button {
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   height: 84px;
   padding: 16px 12px;
   background: #d8d8d8;
@@ -109,6 +109,20 @@ button {
   outline: none;
   -webkit-user-select: text;
   user-select: text;
+}
+
+.play-order-badge {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 46px;
+  border-radius: 5px;
+  background: #eef1f3;
+  color: #4f565b;
+  font-size: 25px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .play-grid-wrap {
@@ -410,12 +424,53 @@ button {
 
 .playbook-button {
   flex: 0 0 auto;
-  min-width: 98px;
+  min-width: 86px;
   height: 46px;
   border-radius: 4px;
   background: #81898f;
   color: #fff;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.full-field-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 4px;
+  background: #eef1f3;
+  color: #4f565b;
+}
+
+.full-field-button.is-active {
+  background: var(--blue);
+  color: #fff;
+}
+
+.full-field-icon {
+  position: relative;
+  width: 29px;
+  height: 29px;
+  color: currentColor;
+}
+
+.full-field-icon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(currentColor 0 0) left top / 12px 4px,
+    linear-gradient(currentColor 0 0) left top / 4px 12px,
+    linear-gradient(currentColor 0 0) right top / 12px 4px,
+    linear-gradient(currentColor 0 0) right top / 4px 12px,
+    linear-gradient(currentColor 0 0) left bottom / 12px 4px,
+    linear-gradient(currentColor 0 0) left bottom / 4px 12px,
+    linear-gradient(currentColor 0 0) right bottom / 12px 4px,
+    linear-gradient(currentColor 0 0) right bottom / 4px 12px;
+  background-repeat: no-repeat;
 }
 
 .field-stage {
@@ -435,6 +490,38 @@ button {
   background: #fff;
   -webkit-user-select: none;
   user-select: none;
+}
+
+.editor-screen {
+  --editor-panel-reserve: 0px;
+}
+
+.editor-screen.has-bottom-panel {
+  --editor-panel-reserve: min(15dvh, 128px);
+}
+
+.editor-screen.is-full-field .field-stage {
+  flex: 0 0 calc(100% - 84px - 64px - var(--editor-panel-reserve));
+  height: calc(100% - 84px - 64px - var(--editor-panel-reserve));
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0;
+}
+
+.editor-screen.is-full-field .field {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.editor-screen.is-full-field .field-label {
+  display: none;
+}
+
+.editor-screen.is-full-field .notes {
+  display: none;
 }
 
 .notes {
@@ -837,15 +924,16 @@ button {
 
 .selection-popover {
   position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 74px;
+  left: 0;
+  right: 0;
+  bottom: 64px;
   z-index: 7;
-  max-height: min(43dvh, 290px);
+  max-height: min(15dvh, 128px);
   overflow: auto;
-  padding: 10px;
-  border: 1px solid rgb(0 0 0 / 12%);
-  border-radius: 8px;
+  overscroll-behavior: contain;
+  padding: 7px 10px 10px;
+  border: 0;
+  border-radius: 0;
   background: rgb(250 251 252 / 96%);
   box-shadow: 0 -8px 24px rgb(0 0 0 / 20%);
 }
@@ -859,7 +947,7 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
 }
 
 .selection-popover-head strong {
@@ -883,12 +971,12 @@ button {
 }
 
 .inspector-group {
-  margin-top: 8px;
+  margin-top: 5px;
 }
 
 .inspector-label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: #6f7a84;
   font-size: 11px;
   font-weight: 900;
@@ -905,7 +993,7 @@ button {
 .visual-row button {
   flex: 0 0 auto;
   min-width: 74px;
-  height: 42px;
+  height: 36px;
   border-radius: 5px;
   background: #d9dee2;
   color: #4d555b;
@@ -1242,6 +1330,25 @@ button {
 }
 
 @media (max-width: 360px) {
+  .editor-topbar {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+
+  .play-order-badge {
+    width: 34px;
+    font-size: 22px;
+  }
+
+  .full-field-button {
+    width: 40px;
+  }
+
+  .playbook-button {
+    min-width: 74px;
+    font-size: 13px;
+  }
+
   .play-grid-wrap {
     padding-inline: 14px;
   }
