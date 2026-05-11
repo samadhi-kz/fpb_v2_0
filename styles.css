@@ -97,6 +97,33 @@ button {
   -webkit-line-clamp: 2;
 }
 
+.home-title-stack {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.home-title-stack .book-title {
+  width: 100%;
+  flex: 0 0 auto;
+  font-size: clamp(17px, 4.6vw, 22px);
+  -webkit-line-clamp: 1;
+}
+
+.folder-scope-label {
+  min-width: 0;
+  color: #6a737a;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .play-name-input {
   height: 58px;
   padding: 2px 0;
@@ -141,6 +168,40 @@ button {
 .play-grid.is-tree {
   display: block;
   color: #f6f7f8;
+}
+
+.play-grid.is-grouped {
+  align-items: start;
+  gap: 12px 18px;
+}
+
+.folder-divider {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 12%);
+  color: #f6f7f8;
+}
+
+.folder-divider-name {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-divider-count {
+  flex: 0 0 auto;
+  color: #cfd6dc;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .play-card,

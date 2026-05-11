@@ -99,6 +99,7 @@ const els = {
   activeFolderBtn: document.querySelector('#activeFolderBtn'),
   treeViewBtn: document.querySelector('#treeViewBtn'),
   bookTitleBtn: document.querySelector('#bookTitleBtn'),
+  folderScopeLabel: document.querySelector('#folderScopeLabel'),
   fieldSvg: document.querySelector('#fieldSvg'),
   gridLayer: document.querySelector('#gridLayer'),
   routeLayer: document.querySelector('#routeLayer'),
@@ -545,11 +546,14 @@ function renderHome() {
   if (!state.book) return;
   els.bookTitleBtn.textContent = state.book.name;
   const folder = activeFolder();
+  const showGroups = state.folderFilterId === 'all' && state.book.folders.length > 1;
   els.playGrid.innerHTML = '';
   els.playGrid.classList.toggle('is-tree', state.homeMode === 'tree');
+  els.playGrid.classList.toggle('is-grouped', state.homeMode !== 'tree' && showGroups);
   els.treeViewBtn.classList.toggle('is-active', state.homeMode === 'tree');
   document.querySelector('#allGridBtn').classList.toggle('is-active', state.homeMode === 'grid' && state.folderFilterId === 'all');
   els.activeFolderBtn.title = folder.name;
+  els.folderScopeLabel.textContent = folderScopeText(folder);
 
   if (state.homeMode === 'tree') {
     renderPlayTree();
@@ -557,36 +561,77 @@ function renderHome() {
     return;
   }
 
+  if (showGroups) renderGroupedHomeGrid();
+  else renderFlatHomeGrid(folder);
+
+  renderCategories();
+}
+
+function folderScopeText(folder) {
+  const count = folder.plays.length;
+  if (folder.id === 'all') return `ALL / ${count} plays`;
+  return `${folder.name} / ${count} plays`;
+}
+
+function renderFlatHomeGrid(folder) {
+  folder.plays.forEach((play, index) => {
+    appendPlayCard(play, index + 1);
+  });
+  els.playGrid.append(newPlayCard());
+}
+
+function renderGroupedHomeGrid() {
+  const entries = allPlays();
+  let lastFolderId = '';
+  entries.forEach(({ folder, play }, index) => {
+    if (folder.id !== lastFolderId) {
+      appendFolderDivider(folder);
+      lastFolderId = folder.id;
+    }
+    appendPlayCard(play, index + 1);
+  });
+
+  const target = targetFolderForNewPlay();
+  if (target && lastFolderId !== target.id) appendFolderDivider(target);
+  els.playGrid.append(newPlayCard());
+}
+
+function appendFolderDivider(folder) {
+  const divider = document.createElement('div');
+  divider.className = 'folder-divider';
+  divider.innerHTML = `<span class="folder-divider-name">${escapeHtml(folder.name)}</span><span class="folder-divider-count">${folder.plays.length}</span>`;
+  els.playGrid.append(divider);
+}
+
+function newPlayCard() {
   const newCard = document.createElement('button');
   newCard.className = 'new-card';
   newCard.type = 'button';
   newCard.innerHTML = '<span><span class="plus">+</span><span class="new-title">New Offensive Play</span></span>';
   newCard.addEventListener('click', createPlay);
-  els.playGrid.append(newCard);
+  return newCard;
+}
 
-  folder.plays.forEach((play, index) => {
-    const card = document.createElement('button');
-    card.className = 'play-card';
-    card.type = 'button';
-    card.dataset.playId = play.id;
-    card.append(renderThumb(play, index + 1));
-    const title = document.createElement('div');
-    title.className = 'card-title';
-    title.textContent = play.name;
-    card.append(title);
-    card.addEventListener('click', (event) => {
-      if (state.homeDrag?.suppressClick) {
-        event.preventDefault();
-        state.homeDrag.suppressClick = false;
-        return;
-      }
-      openPlay(play.id);
-    });
-    card.addEventListener('pointerdown', (event) => startHomeCardPress(event, play.id));
-    els.playGrid.append(card);
+function appendPlayCard(play, number) {
+  const card = document.createElement('button');
+  card.className = 'play-card';
+  card.type = 'button';
+  card.dataset.playId = play.id;
+  card.append(renderThumb(play, number));
+  const title = document.createElement('div');
+  title.className = 'card-title';
+  title.textContent = play.name;
+  card.append(title);
+  card.addEventListener('click', (event) => {
+    if (state.homeDrag?.suppressClick) {
+      event.preventDefault();
+      state.homeDrag.suppressClick = false;
+      return;
+    }
+    openPlay(play.id);
   });
-
-  renderCategories();
+  card.addEventListener('pointerdown', (event) => startHomeCardPress(event, play.id));
+  els.playGrid.append(card);
 }
 
 function renderPlayTree() {
@@ -1502,7 +1547,12 @@ function syncFullFieldUI() {
 function syncEditorLayoutState() {
   const hasToolPanel = els.editorTools.classList.contains('is-open');
   const hasSelectionPanel = Boolean(els.selectionPopover && !els.selectionPopover.hidden);
-  els.editorView.classList.toggle('has-bottom-panel', hasToolPanel || hasSelectionPanel);
+  const reserveSelectionPanel = state.fullFieldMode
+    && !isEditorLocked()
+    && !state.draftRoute
+    && Boolean(state.selected && ['route', 'player', 'annotation'].includes(state.selected.type))
+    && selectedKey() !== state.selectionPopoverDismissedKey;
+  els.editorView.classList.toggle('has-bottom-panel', hasToolPanel || hasSelectionPanel || reserveSelectionPanel);
 }
 
 function startLockPress() {
@@ -1589,16 +1639,26 @@ function openPlay(playId) {
 
 function createPlay() {
   if (!ensureEditable()) return;
-  const folder = state.book.folders.find((item) => item.id === state.activeFolderId) || state.book.folders[0];
+  const previousFilter = state.folderFilterId;
+  const folder = targetFolderForNewPlay();
+  if (!folder) return;
   const play = defaultPlay('New Offensive Play');
   pushHistory();
-  folder.plays.unshift(play);
+  folder.plays.push(play);
   state.activeFolderId = folder.id;
-  state.folderFilterId = folder.id;
+  state.folderFilterId = previousFilter === 'all' ? 'all' : folder.id;
   state.activePlayId = play.id;
   syncPlayOrderFromFolders();
   persist();
   openPlay(play.id);
+}
+
+function targetFolderForNewPlay() {
+  if (!state.book?.folders.length) return null;
+  if (state.folderFilterId === 'all') return state.book.folders[state.book.folders.length - 1];
+  return state.book.folders.find((item) => item.id === state.folderFilterId)
+    || state.book.folders.find((item) => item.id === state.activeFolderId)
+    || state.book.folders[state.book.folders.length - 1];
 }
 
 function createFolder() {
