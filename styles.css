@@ -561,6 +561,10 @@ button {
   --editor-panel-reserve: min(15dvh, 128px);
 }
 
+.editor-screen.is-full-field {
+  --editor-panel-reserve: min(15dvh, 128px);
+}
+
 .editor-screen.is-full-field .field-stage {
   flex: 0 0 calc(100% - 84px - 64px - var(--editor-panel-reserve));
   height: calc(100% - 84px - 64px - var(--editor-panel-reserve));

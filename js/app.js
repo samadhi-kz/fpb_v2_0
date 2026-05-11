@@ -78,6 +78,7 @@ const state = {
   redoHistory: [],
   locked: false,
   fullFieldMode: false,
+  suppressBeforeUnload: false,
   lockPressTimer: null,
   lockPressFired: false,
   selectionPopoverDismissedKey: ''
@@ -1441,6 +1442,7 @@ function bindEvents() {
   document.querySelectorAll('[data-category-action]').forEach((button) => {
     button.addEventListener('click', () => handleCategoryAction(button.dataset.categoryAction));
   });
+  window.addEventListener('beforeunload', handleBeforeUnload);
   document.addEventListener('keydown', handleKeyDown);
   els.fieldSvg.addEventListener('pointerdown', pointerDown);
   els.fieldSvg.addEventListener('pointermove', pointerMove);
@@ -1491,10 +1493,25 @@ function toggleTreeView() {
 function resetAppToHome() {
   if (!confirm('Reset to the empty FPB v2 home screen? Current browser-saved playbook data on this site will be cleared.')) return;
   clearStoredPlaybooks();
+  state.suppressBeforeUnload = true;
   const resetUrl = new URL('https://samadhi-kz.github.io/fpb_v2_0/');
   resetUrl.searchParams.set('reset', Date.now().toString());
   resetUrl.searchParams.set('v', Date.now().toString());
   location.href = resetUrl.toString();
+}
+
+function handleBeforeUnload(event) {
+  if (!shouldConfirmPageUnload()) return;
+  updateActivePlay();
+  persist();
+  event.preventDefault();
+  event.returnValue = '';
+}
+
+function shouldConfirmPageUnload() {
+  if (state.suppressBeforeUnload) return false;
+  if (!els.editorView.classList.contains('is-active')) return false;
+  return Boolean(activePlay() || state.draftRoute);
 }
 
 function toggleToolSheet() {
