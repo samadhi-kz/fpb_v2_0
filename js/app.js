@@ -91,6 +91,10 @@ const els = {
   categoryList: document.querySelector('#categoryList'),
   categoryHandle: document.querySelector('#categoryHandle'),
   categoryActionSheet: document.querySelector('#categoryActionSheet'),
+  restoreSheet: document.querySelector('#restoreSheet'),
+  restoreSummary: document.querySelector('#restoreSummary'),
+  restoreBookBtn: document.querySelector('#restoreBookBtn'),
+  startEmptyBtn: document.querySelector('#startEmptyBtn'),
   sheetHandle: document.querySelector('#sheetHandle'),
   activeFolderBtn: document.querySelector('#activeFolderBtn'),
   treeViewBtn: document.querySelector('#treeViewBtn'),
@@ -251,13 +255,17 @@ async function boot() {
   } else if (!resetRequested && params.get('load') === 'sample') {
     state.book = await loadSampleBook();
   } else {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        state.book = normalizeBook(JSON.parse(saved));
-      } catch {
+    const savedBook = readStoredBook();
+    if (savedBook && hasMeaningfulSavedBook(savedBook)) {
+      const shouldRestore = await chooseStoredBook(savedBook);
+      if (shouldRestore) {
+        state.book = savedBook;
+      } else {
+        clearStoredPlaybooks();
         state.book = seedBook();
       }
+    } else if (savedBook) {
+      state.book = savedBook;
     } else {
       state.book = seedBook();
     }
@@ -275,6 +283,51 @@ async function boot() {
 function clearStoredPlaybooks() {
   Object.keys(localStorage).forEach((key) => {
     if (key.startsWith('fpb-v2-playbook')) localStorage.removeItem(key);
+  });
+}
+
+function readStoredBook() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return null;
+  try {
+    return normalizeBook(JSON.parse(saved));
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
+}
+
+function hasMeaningfulSavedBook(book) {
+  const folders = book?.folders || [];
+  const playCount = folders.reduce((total, folder) => total + (folder.plays?.length || 0), 0);
+  if (playCount > 0) return true;
+  if ((book?.name || DEFAULT_BOOK_NAME) !== DEFAULT_BOOK_NAME) return true;
+  if (folders.length !== 1) return true;
+  const [folder] = folders;
+  if (!folder) return false;
+  if (folder.id !== 'folder-empty' || folder.name !== 'New Folder') return true;
+  return Boolean(book.activePlayId || book.playOrder?.length);
+}
+
+function chooseStoredBook(book) {
+  return new Promise((resolve) => {
+    const playCount = book.folders.reduce((total, folder) => total + folder.plays.length, 0);
+    const folderCount = book.folders.length;
+    els.restoreSummary.textContent = `${book.name || DEFAULT_BOOK_NAME} / ${playCount}プレー / ${folderCount}フォルダ。空で始めると、このブラウザの保存データを消します。`;
+    els.restoreSheet.hidden = false;
+
+    const cleanup = (shouldRestore) => {
+      els.restoreBookBtn.removeEventListener('click', restore);
+      els.startEmptyBtn.removeEventListener('click', startEmpty);
+      els.restoreSheet.hidden = true;
+      resolve(shouldRestore);
+    };
+    const restore = () => cleanup(true);
+    const startEmpty = () => cleanup(false);
+
+    els.restoreBookBtn.addEventListener('click', restore);
+    els.startEmptyBtn.addEventListener('click', startEmpty);
+    requestAnimationFrame(() => els.restoreBookBtn.focus());
   });
 }
 

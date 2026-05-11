@@ -647,6 +647,71 @@ button {
   min-height: 64px;
 }
 
+.restore-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+
+.restore-sheet[hidden] {
+  display: none;
+}
+
+.restore-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 46%);
+}
+
+.restore-dialog {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 20px 16px 16px;
+  border-radius: 8px;
+  background: #f7f8f9;
+  box-shadow: 0 14px 36px rgb(0 0 0 / 28%);
+}
+
+.restore-dialog h2 {
+  margin: 0 0 8px;
+  color: #3f474d;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.restore-summary {
+  margin: 0 0 16px;
+  color: #65707a;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.restore-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.restore-actions button {
+  min-height: 48px;
+  border-radius: 6px;
+  background: #d9dee2;
+  color: #4d555b;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.restore-actions .restore-primary {
+  background: var(--blue);
+  color: #fff;
+}
+
 .action-icon {
   display: grid;
   place-items: center;
@@ -1347,6 +1412,10 @@ button {
   .playbook-button {
     min-width: 74px;
     font-size: 13px;
+  }
+
+  .restore-actions {
+    grid-template-columns: 1fr;
   }
 
   .play-grid-wrap {

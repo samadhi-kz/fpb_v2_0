@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#d8d8d8">
     <title>FPB v2</title>
-    <link rel="stylesheet" href="styles.css?v=20260511-full-field">
+    <link rel="stylesheet" href="styles.css?v=20260511-restore-choice">
   </head>
   <body>
     <main class="phone-shell" aria-label="Flag Play Board v2">
@@ -264,10 +264,21 @@
           <button type="button" data-category-action="delete"><span class="action-icon">Del</span><span>Delete</span></button>
         </div>
       </aside>
+      <aside id="restoreSheet" class="restore-sheet" aria-label="Saved playbook choice" hidden>
+        <div class="restore-backdrop"></div>
+        <section class="restore-dialog" role="dialog" aria-modal="true" aria-labelledby="restoreTitle">
+          <h2 id="restoreTitle">前回のPlaybookがあります</h2>
+          <p id="restoreSummary" class="restore-summary">保存済みの内容を開きますか？</p>
+          <div class="restore-actions">
+            <button id="restoreBookBtn" class="restore-primary" type="button">続きから</button>
+            <button id="startEmptyBtn" type="button">空で始める</button>
+          </div>
+        </section>
+      </aside>
       <input id="jsonInput" class="visually-hidden" type="file" accept=".json,application/json">
     </main>
 
-    <script src="js/default-book.js?v=20260511-full-field"></script>
-    <script src="js/app.js?v=20260511-full-field"></script>
+    <script src="js/default-book.js?v=20260511-restore-choice"></script>
+    <script src="js/app.js?v=20260511-restore-choice"></script>
   </body>
 </html>
