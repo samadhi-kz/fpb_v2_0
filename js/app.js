@@ -113,6 +113,7 @@ const els = {
   editorHandle: document.querySelector('#editorHandle'),
   selectionPopover: document.querySelector('#selectionPopover'),
   selectionPopoverTitle: document.querySelector('#selectionPopoverTitle'),
+  quickDeleteSelectionBtn: document.querySelector('#quickDeleteSelectionBtn'),
   routeInspector: document.querySelector('#routeInspector'),
   playerInspector: document.querySelector('#playerInspector'),
   annotationInspector: document.querySelector('#annotationInspector'),
@@ -127,7 +128,9 @@ const els = {
   lockBtn: document.querySelector('#lockBtn'),
   lockLabel: document.querySelector('#lockLabel'),
   undoBtn: document.querySelector('#undoBtn'),
+  undoLabel: document.querySelector('#undoLabel'),
   redoBtn: document.querySelector('#redoBtn'),
+  redoLabel: document.querySelector('#redoLabel'),
   fullFieldBtn: document.querySelector('#fullFieldBtn'),
   drawToolsBtn: document.querySelector('#drawToolsBtn'),
   formationBtn: document.querySelector('#formationBtn'),
@@ -1327,7 +1330,7 @@ function bindEvents() {
   document.querySelector('#duplicateBtn').addEventListener('click', duplicatePlay);
   document.querySelector('#deleteBtn').addEventListener('click', deleteSelectedOrPlay);
   els.undoBtn.addEventListener('click', undo);
-  els.redoBtn.addEventListener('click', redo);
+  els.redoBtn.addEventListener('click', handleRedoOrFinish);
   els.drawToolsBtn.addEventListener('click', () => openToolPanel('draw'));
   els.formationBtn.addEventListener('click', () => openToolPanel('formation'));
   els.editActionsBtn.addEventListener('click', () => openToolPanel('edit'));
@@ -2069,12 +2072,13 @@ function pointerDown(event) {
     return;
   }
 
-  if (DRAW_TOOLS.has(state.tool)) {
-    startRouteDraft(event, play, point, type, target);
+  if (type === 'route') {
+    selectRouteForEdit(play, target, point, event.pointerId);
+    renderEditor();
     return;
   }
 
-  if (type === 'player' || type === 'defender' || type === 'annotation') {
+  if (type === 'defender' || type === 'annotation') {
     state.selected = { type, id: target.dataset.id };
     state.dragging = { type, id: target.dataset.id };
     pushHistory();
@@ -2083,20 +2087,16 @@ function pointerDown(event) {
     return;
   }
 
-  if (type === 'route') {
-    state.selected = { type: 'route', id: target.dataset.id };
-    const item = play.routes.find((routeItem) => routeItem.id === target.dataset.id);
-    if (item) {
-      state.dragging = {
-        type: 'route-move',
-        id: item.id,
-        start: clampPoint(point),
-        points: clone(item.points),
-        moved: false
-      };
-      pushHistory();
-      els.fieldSvg.setPointerCapture(event.pointerId);
-    }
+  if (DRAW_TOOLS.has(state.tool)) {
+    startRouteDraft(event, play, point, type, target);
+    return;
+  }
+
+  if (type === 'player') {
+    state.selected = { type, id: target.dataset.id };
+    state.dragging = { type, id: target.dataset.id };
+    pushHistory();
+    els.fieldSvg.setPointerCapture(event.pointerId);
     renderEditor();
     return;
   }
@@ -2114,6 +2114,21 @@ function pointerDown(event) {
 
   state.selected = null;
   renderEditor();
+}
+
+function selectRouteForEdit(play, target, point, pointerId) {
+  state.selected = { type: 'route', id: target.dataset.id };
+  const item = play.routes.find((routeItem) => routeItem.id === target.dataset.id);
+  if (!item) return;
+  state.dragging = {
+    type: 'route-move',
+    id: item.id,
+    start: clampPoint(point),
+    points: clone(item.points),
+    moved: false
+  };
+  pushHistory();
+  els.fieldSvg.setPointerCapture(pointerId);
 }
 
 function pointerMove(event) {
@@ -2331,6 +2346,7 @@ function selectedKey() {
 function closeSelectionPopover() {
   state.selectionPopoverDismissedKey = selectedKey();
   if (els.selectionPopover) els.selectionPopover.hidden = true;
+  els.quickDeleteSelectionBtn.hidden = true;
   syncEditorLayoutState();
 }
 
@@ -2340,6 +2356,7 @@ function syncSelectionPopover(play) {
   const show = Boolean(key && key !== state.selectionPopoverDismissedKey && !state.dragging && !state.draftRoute && !isEditorLocked() && ['route', 'player', 'annotation'].includes(type));
   if (!show) {
     els.selectionPopover.hidden = true;
+    els.quickDeleteSelectionBtn.hidden = true;
     return;
   }
 
@@ -2348,6 +2365,7 @@ function syncSelectionPopover(play) {
   const annotation = type === 'annotation' ? play.annotations.find((item) => item.id === state.selected.id) : null;
   if ((type === 'route' && !route) || (type === 'player' && !player) || (type === 'annotation' && !annotation)) {
     els.selectionPopover.hidden = true;
+    els.quickDeleteSelectionBtn.hidden = true;
     return;
   }
 
@@ -2355,6 +2373,8 @@ function syncSelectionPopover(play) {
   els.routeInspector.hidden = type !== 'route';
   els.playerInspector.hidden = type !== 'player';
   els.annotationInspector.hidden = type !== 'annotation';
+  els.quickDeleteSelectionBtn.hidden = !(type === 'route' || type === 'annotation');
+  els.quickDeleteSelectionBtn.textContent = type === 'annotation' ? 'Delete Text' : 'Delete Line';
   els.selectionPopoverTitle.textContent = type === 'route'
     ? 'Selected Line'
     : type === 'player'
@@ -2520,10 +2540,19 @@ function syncControls() {
   });
   els.finishRouteBtn.disabled = state.draftRoute?.input !== 'bend';
   els.undoPointBtn.disabled = state.draftRoute?.input !== 'bend';
+  syncBottomRouteDraftActions();
+}
+
+function syncBottomRouteDraftActions() {
+  const isBendDraft = state.draftRoute?.input === 'bend';
+  els.undoLabel.textContent = isBendDraft ? 'Pt -' : '↶';
+  els.redoLabel.textContent = isBendDraft ? 'Done' : '↷';
+  els.undoBtn.title = isBendDraft ? 'Undo point' : 'Undo';
+  els.redoBtn.title = isBendDraft ? 'Finish line' : 'Redo';
 }
 
 function selectionText(play) {
-  if (state.draftRoute?.input === 'bend') return 'Bend: tap points, double-tap or Finish to save';
+  if (state.draftRoute?.input === 'bend') return 'Bend: tap points, Done to save';
   if (state.draftRoute?.input === 'free') return 'Free: drag to draw';
   if (!state.selected) return 'Select a player, route, defense, or note';
   if (state.selected.type === 'player') {
@@ -2563,6 +2592,14 @@ function undo() {
   if (!previous) return;
   state.redoHistory.push(clone(state.book));
   restoreBook(previous);
+}
+
+function handleRedoOrFinish() {
+  if (state.draftRoute?.input === 'bend') {
+    finishRoute();
+    return;
+  }
+  redo();
 }
 
 function redo() {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#d8d8d8">
     <title>FPB v2</title>
-    <link rel="stylesheet" href="styles.css?v=20260511-restore-choice">
+    <link rel="stylesheet" href="styles.css?v=20260511-mobile-edit">
   </head>
   <body>
     <main class="phone-shell" aria-label="Flag Play Board v2">
@@ -65,8 +65,8 @@
         </section>
 
         <nav class="editor-bottom" aria-label="Editor commands">
-          <button id="undoBtn" type="button" title="Undo"><span class="bar-label">↶</span></button>
-          <button id="redoBtn" type="button" title="Redo"><span class="bar-label">↷</span></button>
+          <button id="undoBtn" type="button" title="Undo"><span id="undoLabel" class="bar-label">↶</span></button>
+          <button id="redoBtn" type="button" title="Redo"><span id="redoLabel" class="bar-label">↷</span></button>
           <button id="drawToolsBtn" type="button" title="Draw"><span class="bar-label">Draw</span></button>
           <button id="formationBtn" type="button" title="Formation"><span class="bar-label">Form</span></button>
           <button id="editActionsBtn" type="button" title="Edit"><span class="bar-label">Edit</span></button>
@@ -78,7 +78,10 @@
         <aside id="selectionPopover" class="selection-popover" aria-label="Selection editor" hidden>
           <div class="selection-popover-head">
             <strong id="selectionPopoverTitle">Selection</strong>
-            <button id="closeSelectionPopover" type="button" aria-label="Close selection editor">×</button>
+            <div class="selection-popover-actions">
+              <button id="quickDeleteSelectionBtn" class="selection-delete-btn" type="button" data-selection-delete="true" hidden>Delete</button>
+              <button id="closeSelectionPopover" type="button" aria-label="Close selection editor">×</button>
+            </div>
           </div>
           <div id="routeInspector" class="inspector-panel" hidden>
             <div class="inspector-group">
@@ -278,7 +281,7 @@
       <input id="jsonInput" class="visually-hidden" type="file" accept=".json,application/json">
     </main>
 
-    <script src="js/default-book.js?v=20260511-restore-choice"></script>
-    <script src="js/app.js?v=20260511-restore-choice"></script>
+    <script src="js/default-book.js?v=20260511-mobile-edit"></script>
+    <script src="js/app.js?v=20260511-mobile-edit"></script>
   </body>
 </html>
