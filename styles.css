@@ -1526,8 +1526,144 @@ button {
   }
 }
 
+@media (min-width: 700px) {
+  body {
+    display: grid;
+    min-height: 100dvh;
+    padding: 12px;
+    place-items: center;
+  }
+
+  .phone-shell {
+    width: min(94vw, 760px);
+    max-width: none;
+    height: min(calc(100dvh - 24px), 1024px);
+    min-height: min(720px, calc(100dvh - 24px));
+  }
+
+  .topbar,
+  .editor-topbar {
+    padding-inline: 18px;
+  }
+
+  .play-grid-wrap {
+    padding: 28px 24px 96px;
+  }
+
+  .play-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .play-grid.is-grouped {
+    gap: 14px 20px;
+  }
+
+  .card-title {
+    font-size: clamp(14px, 2vw, 17px);
+  }
+
+  .tool-sheet,
+  .selection-popover {
+    max-height: min(20dvh, 180px);
+  }
+
+  .editor-screen.has-bottom-panel,
+  .editor-screen.is-full-field {
+    --editor-panel-reserve: min(20dvh, 180px);
+  }
+}
+
+@media (min-width: 980px) {
+  body {
+    padding: 16px;
+  }
+
+  .phone-shell {
+    width: min(94vw, 960px);
+    height: min(calc(100dvh - 32px), 1000px);
+    min-height: min(760px, calc(100dvh - 32px));
+  }
+
+  .play-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .editor-screen.is-active {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+    grid-template-rows: 84px minmax(0, 1fr) 64px;
+  }
+
+  .editor-topbar {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .field-stage {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 12px;
+  }
+
+  .field {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+  }
+
+  .notes {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+    padding: 14px 16px 18px;
+    border-left: 1px solid #e1e4e7;
+    overflow: hidden;
+  }
+
+  .notes h2 {
+    margin-bottom: 10px;
+  }
+
+  .editor-bottom {
+    position: static;
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .editor-screen.is-full-field {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-screen.is-full-field .field-stage {
+    grid-column: 1;
+    grid-row: 2;
+    height: auto;
+  }
+
+  .editor-screen.is-full-field .editor-bottom {
+    grid-column: 1;
+  }
+
+  .tool-sheet,
+  .selection-popover {
+    max-height: min(24dvh, 220px);
+  }
+
+  .tool-controls {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 @media print {
   body {
+    display: block;
+    min-height: 100%;
+    padding: 0;
     background: #fff;
   }
 
