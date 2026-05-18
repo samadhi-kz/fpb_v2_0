@@ -78,6 +78,7 @@ const state = {
   redoHistory: [],
   locked: false,
   fullFieldMode: false,
+  touchGuide: null,
   suppressBeforeUnload: false,
   lockPressTimer: null,
   lockPressFired: false,
@@ -108,6 +109,7 @@ const els = {
   playerLayer: document.querySelector('#playerLayer'),
   annotationLayer: document.querySelector('#annotationLayer'),
   handleLayer: document.querySelector('#handleLayer'),
+  touchDragHud: document.querySelector('#touchDragHud'),
   playOrderBadge: document.querySelector('#playOrderBadge'),
   playNameInput: document.querySelector('#playNameInput'),
   notesInput: document.querySelector('#notesInput'),
@@ -983,6 +985,7 @@ function renderEditor() {
   drawPlayers(play);
   drawAnnotations(play);
   drawSelectionHandles(play);
+  drawTouchGuide();
   syncControls();
   syncLockUI();
   syncFullFieldUI();
@@ -1142,6 +1145,47 @@ function sanitizedRoutePoints(points) {
 
 function touchSized() {
   return window.matchMedia?.('(pointer: coarse)').matches || window.innerWidth <= 640;
+}
+
+function touchGuideEnabled(event) {
+  return event?.pointerType === 'touch' || touchSized();
+}
+
+function touchGuideLabel(play, type, id, index = null) {
+  if (type === 'player') {
+    const player = play.players.find((item) => item.id === id);
+    return `Player ${player?.label || ''}`.trim();
+  }
+  if (type === 'defender') return 'Defense X';
+  if (type === 'annotation') return 'Text';
+  if (type === 'route-point') return index === 0 ? 'Route start' : 'Route point';
+  if (type === 'route-move') return 'Move line';
+  if (DRAW_TOOLS.has(type)) return `${type[0].toUpperCase()}${type.slice(1)} line`;
+  return 'Move';
+}
+
+function setTouchGuide(event, label, x, y) {
+  if (!touchGuideEnabled(event)) return;
+  state.touchGuide = { label, x, y };
+  syncTouchGuideHud();
+}
+
+function updateTouchGuide(x, y, label = state.touchGuide?.label) {
+  if (!state.touchGuide) return;
+  state.touchGuide = { label: label || 'Move', x, y };
+  syncTouchGuideHud();
+}
+
+function clearTouchGuide() {
+  state.touchGuide = null;
+  syncTouchGuideHud();
+}
+
+function syncTouchGuideHud() {
+  els.editorView.classList.toggle('is-touch-dragging', Boolean(state.touchGuide));
+  if (els.touchDragHud) {
+    els.touchDragHud.textContent = state.touchGuide?.label || '';
+  }
 }
 
 function arrowEndNode(points, item, play, scale) {
@@ -1338,6 +1382,47 @@ function drawSelectionHandles(play) {
       'data-index': index
     }));
   });
+}
+
+function drawTouchGuide() {
+  if (!state.touchGuide || isEditorLocked()) return;
+  const { x, y } = state.touchGuide;
+  const ring = svgEl('g', { class: 'touch-guide' });
+  ring.append(svgEl('circle', {
+    class: 'touch-guide-ring',
+    cx: x,
+    cy: y,
+    r: 48
+  }));
+  ring.append(svgEl('line', {
+    class: 'touch-guide-cross',
+    x1: x - 64,
+    y1: y,
+    x2: x - 26,
+    y2: y
+  }));
+  ring.append(svgEl('line', {
+    class: 'touch-guide-cross',
+    x1: x + 26,
+    y1: y,
+    x2: x + 64,
+    y2: y
+  }));
+  ring.append(svgEl('line', {
+    class: 'touch-guide-cross',
+    x1: x,
+    y1: y - 64,
+    x2: x,
+    y2: y - 26
+  }));
+  ring.append(svgEl('line', {
+    class: 'touch-guide-cross',
+    x1: x,
+    y1: y + 26,
+    x2: x,
+    y2: y + 64
+  }));
+  els.handleLayer.append(ring);
 }
 
 function selectedClass(type, id) {
@@ -1604,6 +1689,7 @@ function toggleLockMode() {
   state.selected = null;
   state.dragging = null;
   state.draftRoute = null;
+  clearTouchGuide();
   state.selectionPopoverDismissedKey = '';
   els.editorTools.classList.remove('is-open');
   els.editorHandle?.setAttribute('aria-expanded', 'false');
@@ -2029,7 +2115,10 @@ function startRouteDraft(event, play, point, targetType, target) {
   };
   play.routes.push(state.draftRoute);
   state.selected = { type: 'route', id: state.draftRoute.id };
-  if (input !== 'bend') els.fieldSvg.setPointerCapture(event.pointerId);
+  if (input !== 'bend') {
+    setTouchGuide(event, touchGuideLabel(play, state.tool, state.draftRoute.id), end[0], end[1]);
+    els.fieldSvg.setPointerCapture(event.pointerId);
+  }
   renderEditor();
 }
 
@@ -2079,6 +2168,7 @@ function finishRoute() {
   }
   state.draftRoute = null;
   state.dragging = null;
+  clearTouchGuide();
   persist();
   renderAll();
 }
@@ -2090,6 +2180,7 @@ function cancelRouteDraft() {
   state.draftRoute = null;
   state.dragging = null;
   state.selected = null;
+  clearTouchGuide();
   persist();
   renderAll();
 }
@@ -2127,9 +2218,11 @@ function pointerDown(event) {
   }
 
   if (type === 'route-point') {
+    const index = Number(target.dataset.index);
     state.selected = { type: 'route', id: target.dataset.id };
-    state.dragging = { type: 'route-point', id: target.dataset.id, index: Number(target.dataset.index) };
+    state.dragging = { type: 'route-point', id: target.dataset.id, index };
     pushHistory();
+    setTouchGuide(event, touchGuideLabel(play, 'route-point', target.dataset.id, index), point.x, point.y);
     els.fieldSvg.setPointerCapture(event.pointerId);
     renderEditor();
     return;
@@ -2144,6 +2237,7 @@ function pointerDown(event) {
     item.points.splice(index, 0, [point.x, point.y]);
     state.selected = { type: 'route', id: item.id };
     state.dragging = { type: 'route-point', id: item.id, index };
+    setTouchGuide(event, touchGuideLabel(play, 'route-point', item.id, index), point.x, point.y);
     els.fieldSvg.setPointerCapture(event.pointerId);
     renderEditor();
     return;
@@ -2151,6 +2245,7 @@ function pointerDown(event) {
 
   if (type === 'route') {
     selectRouteForEdit(play, target, point, event.pointerId);
+    setTouchGuide(event, touchGuideLabel(play, 'route-move', target.dataset.id), point.x, point.y);
     renderEditor();
     return;
   }
@@ -2159,6 +2254,7 @@ function pointerDown(event) {
     state.selected = { type, id: target.dataset.id };
     state.dragging = { type, id: target.dataset.id };
     pushHistory();
+    setTouchGuide(event, touchGuideLabel(play, type, target.dataset.id), point.x, point.y);
     els.fieldSvg.setPointerCapture(event.pointerId);
     renderEditor();
     return;
@@ -2173,6 +2269,7 @@ function pointerDown(event) {
     state.selected = { type, id: target.dataset.id };
     state.dragging = { type, id: target.dataset.id };
     pushHistory();
+    setTouchGuide(event, touchGuideLabel(play, type, target.dataset.id), point.x, point.y);
     els.fieldSvg.setPointerCapture(event.pointerId);
     renderEditor();
     return;
@@ -2223,6 +2320,7 @@ function pointerMove(event) {
       const delta = clampedRouteDelta(state.dragging.points, x - state.dragging.start[0], y - state.dragging.start[1]);
       item.points = state.dragging.points.map(([px, py]) => [px + delta.dx, py + delta.dy]);
       state.dragging.moved = Math.hypot(delta.dx, delta.dy) > 2;
+      updateTouchGuide(x, y);
       renderEditor();
     }
     return;
@@ -2233,6 +2331,7 @@ function pointerMove(event) {
     if (player) {
       player.x = x;
       player.y = y;
+      updateTouchGuide(x, y);
       renderEditor();
     }
     return;
@@ -2243,6 +2342,7 @@ function pointerMove(event) {
     if (defender) {
       defender.x = x;
       defender.y = y;
+      updateTouchGuide(x, y);
       renderEditor();
     }
     return;
@@ -2253,6 +2353,7 @@ function pointerMove(event) {
     if (note) {
       note.x = x;
       note.y = y;
+      updateTouchGuide(x, y);
       renderEditor();
     }
     return;
@@ -2262,6 +2363,7 @@ function pointerMove(event) {
     const item = play.routes.find((routeItem) => routeItem.id === state.dragging.id);
     if (item?.points[state.dragging.index]) {
       item.points[state.dragging.index] = [x, y];
+      updateTouchGuide(x, y);
       renderEditor();
     }
     return;
@@ -2272,6 +2374,7 @@ function pointerMove(event) {
     const last = points[points.length - 1];
     if (!last || Math.hypot(x - last[0], y - last[1]) > 8) {
       points.push([x, y]);
+      updateTouchGuide(x, y);
       renderEditor();
     }
     return;
@@ -2279,6 +2382,7 @@ function pointerMove(event) {
 
   if (state.draftRoute) {
     state.draftRoute.points[state.draftRoute.points.length - 1] = [x, y];
+    updateTouchGuide(x, y);
     renderEditor();
   }
 }
@@ -2287,11 +2391,13 @@ function pointerUp() {
   if (isEditorLocked()) return;
   if (state.draftRoute?.input === 'bend') return;
   if (state.draftRoute?.input === 'straight' || state.draftRoute?.input === 'free') {
+    clearTouchGuide();
     finishRoute();
     return;
   }
   if (state.dragging) {
     state.dragging = null;
+    clearTouchGuide();
     persist();
     renderAll();
   }
@@ -2533,6 +2639,7 @@ function handleKeyDown(event) {
     state.selected = null;
     state.draftRoute = null;
     state.dragging = null;
+    clearTouchGuide();
     state.selectionPopoverDismissedKey = '';
     renderEditor();
   }
