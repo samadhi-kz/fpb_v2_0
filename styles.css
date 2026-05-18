@@ -1635,8 +1635,18 @@ button {
     grid-row: 3;
   }
 
+  .editor-screen.has-bottom-panel,
+  .editor-screen.is-full-field {
+    --editor-panel-reserve: min(24dvh, 220px);
+  }
+
   .editor-screen.is-full-field {
     grid-template-columns: 1fr;
+    grid-template-rows: 84px minmax(0, 1fr) 64px;
+  }
+
+  .editor-screen.is-full-field.has-bottom-panel {
+    grid-template-rows: 84px minmax(0, 1fr) var(--editor-panel-reserve) 64px;
   }
 
   .editor-screen.is-full-field .field-stage {
@@ -1647,6 +1657,11 @@ button {
 
   .editor-screen.is-full-field .editor-bottom {
     grid-column: 1;
+    grid-row: 3;
+  }
+
+  .editor-screen.is-full-field.has-bottom-panel .editor-bottom {
+    grid-row: 4;
   }
 
   .tool-sheet,
